@@ -17,7 +17,7 @@ const TERM_DATA = {
     },
     intermediate: {
       text: "Llave de Lectura (XPUB)",
-      tooltip: "XPUB (Llave Pública Extendida): Permite que la app vea tus fondos y reciba depósitos, pero NO puede gastarlos. Es 100% seguro compartirla."
+      tooltip: "Permite ver fondos y recibir, sin poder gastarlos. Seguro de compartir."
     },
     advanced: {
       text: "XPUB / ZPUB",
@@ -31,7 +31,7 @@ const TERM_DATA = {
     },
     intermediate: {
       text: "Huella Digital (Fingerprint)",
-      tooltip: "Fingerprint: Un código de 8 caracteres que sirve de 'cédula de identidad' para tu billetera física. Ejemplo: 7a3f89e2."
+      tooltip: "Código de 8 caracteres que identifica unívocamente a tu dispositivo físico."
     },
     advanced: {
       text: "Master Key Fingerprint",
@@ -45,7 +45,7 @@ const TERM_DATA = {
     },
     intermediate: {
       text: "Ruta de la Llave (Derivation Path)",
-      tooltip: "Ruta de Derivación: Indica el camino exacto dentro del chip de tu dispositivo donde se encuentra esta llave específica. Ejemplo: m/48'/0'/0'/2'."
+      tooltip: "Ubicación exacta de la llave dentro del chip del dispositivo."
     },
     advanced: {
       text: "Derivation Path",
@@ -59,7 +59,7 @@ const TERM_DATA = {
     },
     intermediate: {
       text: "Bloqueo de Emergencia (Timelock)",
-      tooltip: "Timelock (BIP68): Un seguro temporal de Bitcoin. Si pierdes tus llaves primarias, el sistema te permite recuperar fondos usando menos firmas tras esperar este plazo en bloques. Ejemplo: 25,920 bloques (~180 días)."
+      tooltip: "Seguro (BIP68) que te permite gastar con menos firmas tras un plazo de inactividad."
     },
     advanced: {
       text: "BIP68 Relative Timelock",
@@ -73,7 +73,7 @@ const TERM_DATA = {
     },
     intermediate: {
       text: "Firmas Necesarias (Quórum)",
-      tooltip: "Quórum: El número mínimo de llaves necesarias para gastar los fondos (M de N). Por ejemplo: necesitas 2 firmas de un total de 3 llaves."
+      tooltip: "Mínimo de firmas requeridas en conjunto para autorizar un gasto."
     },
     advanced: {
       text: "M of N Multisig Quorum",

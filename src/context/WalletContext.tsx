@@ -3,19 +3,23 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { VaultConfig, SetupStep } from "@/lib/types/vault";
 
+import { generateDescriptor as genDesc } from "@/lib/bitcoin/descriptor";
+import { deriveWshAddresses } from "@/lib/bitcoin/address";
+
+
 const DEFAULT_CONFIG: VaultConfig = {
   totalDevices: 3,
   requiredApprovals: 2,
   keys: [],
   timelock: {
-    enabled: false,
+    enabled: true,
     type: "relative",
     blocks: 25920,
     recoveryMode: "current-keys",
     recoveryApprovals: 1,
     trustedKey: null,
   },
-  network: "testnet",
+  network: "signet",
 };
 
 export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
@@ -23,6 +27,8 @@ export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
 export interface HelpContent {
   title: string;
   text: string;
+  x?: number;
+  y?: number;
 }
 
 interface WalletState {
@@ -64,14 +70,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   // Funciones mockeadas preparadas para BDK o bitcoinerlab
-  const generateDescriptor = () => {
-    // TODO: Reemplazar por implementación real
-    return `wsh(sortedmulti(${config.requiredApprovals},...))`; 
-  };
+  const generateDescriptor = () => genDesc(config);
 
   const deriveAddresses = () => {
-    // TODO: Reemplazar por derivación real BIP32
-    return ["tb1q...", "tb1q..."];
+    const validKeys = config.keys.filter((k) => k.isValid);
+    return deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 5, 0)
+      .map((a) => a.address);
   };
 
   return (

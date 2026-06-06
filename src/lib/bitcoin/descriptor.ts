@@ -19,21 +19,43 @@ export function generateDescriptor(config: VaultConfig): string {
     const path =
       k.derivationPath === "m"
         ? ""
-        : k.derivationPath.replace(/^m\//, "");
+        : k.derivationPath.replace(/^m\//, "").replace(/'/g, "h");
+//                                          ↑ convierte ' → h
 
     return `[${k.fingerprint}${path ? `/${path}` : ""}]${k.xpub}/0/*`;
   });
 
   const multisig = `sortedmulti(${requiredApprovals},${keyExprs.join(",")})`;
-
   let inner = multisig;
 
   if (config.timelock.enabled) {
     const tlFrag = timelockDescriptorFragment(config.timelock);
 
-    // IMPORTANTE:
-    // Esto sólo será válido si tlFrag devuelve una expresión Miniscript válida.
-    inner = `or_d(${multisig},${tlFrag})`;
+    let recoveryBranch = "";
+    if (config.timelock.recoveryMode === "current-keys") {
+      // Usar las mismas llaves pero con menor umbral y con un índice de derivación diferente (/1/*)
+      // Esto es OBLIGATORIO en Miniscript para evitar claves públicas duplicadas en ramas OR.
+      const recApprovals = config.timelock.recoveryApprovals || 1;
+      
+      const recKeyExprs = validKeys.map((k) => {
+        const path = k.derivationPath === "m" ? "" : k.derivationPath.replace(/^m\//, "");
+        return `[${k.fingerprint}${path ? `/${path}` : ""}]${k.xpub}/1/*`;
+      });
+
+      if (recApprovals < requiredApprovals) {
+        recoveryBranch = `and_v(v:multi(${recApprovals},${recKeyExprs.join(",")}),${tlFrag})`;
+      }
+    } else if (config.timelock.recoveryMode === "trusted-person" && config.timelock.trustedKey) {
+      // Usar la llave de la persona de confianza
+      const tk = config.timelock.trustedKey;
+      const path = tk.derivationPath === "m" ? "" : tk.derivationPath.replace(/^m\//, "");
+      const tkExpr = `[${tk.fingerprint}${path ? `/${path}` : ""}]${tk.xpub}/0/*`;
+      recoveryBranch = `and_v(v:pk(${tkExpr}),${tlFrag})`;
+    }
+
+    if (recoveryBranch) {
+      inner = `or_d(${multisig},${recoveryBranch})`;
+    }
   }
 
   return `wsh(${inner})`;

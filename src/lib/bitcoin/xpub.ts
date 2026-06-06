@@ -3,7 +3,35 @@ import { BIP32Factory } from "bip32";
 import * as ecc from "tiny-secp256k1";
 
 const bip32 = BIP32Factory(ecc);
-// inputValue
+
+// 🔹 Definir la red Signet (ya que bitcoinjs-lib no la incluye nativamente)
+export const SIGNET_NETWORK = {
+  messagePrefix: '\x18Bitcoin Signed Message:\n',
+  bech32: 'tb',          // Signet usa el mismo prefijo que testnet
+  bip32: {
+    public: 0x043587cf,  // tpub
+    private: 0x04358394, // tprv
+  },
+  pubKeyHash: 0x6f,      // m/n
+  scriptHash: 0xc4,      // 2
+  wif: 0xef,
+};
+
+// 🔹 Función auxiliar para obtener la red correcta
+export function getBitcoinNetwork(network: "mainnet" | "testnet" | "signet" | "testnet4") {
+  switch (network) {
+    case "mainnet":
+      return bitcoin.networks.bitcoin;
+    case "testnet":
+    case "testnet4":
+      return bitcoin.networks.testnet;
+    case "signet":
+      return SIGNET_NETWORK;
+    default:
+      return bitcoin.networks.bitcoin;
+  }
+}
+
 export interface ParsedXpub {
   xpub: string;
   fingerprint: string;       // 4 bytes hex del master key parent
@@ -27,11 +55,10 @@ export const TESTNET_PATHS: Record<string, string> = {
 
 export function parseXpub(
   raw: string,
-  network: "mainnet" | "testnet" = "mainnet"
+  network: "mainnet" | "testnet" | "signet" | "testnet4" = "mainnet"
 ): ParsedXpub {
-  const net = network === "testnet"
-    ? bitcoin.networks.testnet
-    : bitcoin.networks.bitcoin;
+  // 🔹 Usar la función auxiliar para obtener la red correcta
+  const net = getBitcoinNetwork(network);
 
   try {
     const node = bip32.fromBase58(raw.trim(), net);
@@ -60,7 +87,7 @@ export function parseXpub(
 
 // Valida formato de path: m/48'/0'/0'/2' o m/45'
 export function validateDerivationPath(path: string): boolean {
-  return /^m(\/\d+'?)*$/.test(path.trim());
+  return /^m(\/\d+[h']?)*$/.test(path.trim());
 }
 
 // Shortform para UI: "xpub6ABC...XYZ"
