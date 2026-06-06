@@ -5,25 +5,21 @@ export interface XpubEntry {
   fingerprint: string;
   derivationPath: string;
   isValid: boolean;
-  deviceType?: "mobile" | "laptop";
 }
 
 export interface TimelockConfig {
   enabled: boolean;
   type: "relative" | "absolute";
-  blocks: number;
-  // Nueva lógica de recuperación
-  recoveryMode: "current-keys" | "trusted-person";
-  recoveryApprovals: number;      // para current-keys: cuántas firmas en ruta recovery
-  trustedKey: XpubEntry | null;   // para trusted-person
+  blocks: number; // BIP68 relativo o BIP65 absoluto
 }
 
 export interface VaultConfig {
-  totalDevices: number;
-  requiredApprovals: number;
+  totalDevices: number;      // M
+  requiredApprovals: number; // N
   keys: XpubEntry[];
   timelock: TimelockConfig;
   network: "mainnet" | "testnet";
 }
 
-export type SetupStep = 0 | 1 | 2 | 3 | 4;
+export type SetupStep = 1 | 2 | 3 | 4;
+export type VaultScreen = "home" | "setup" | "success";

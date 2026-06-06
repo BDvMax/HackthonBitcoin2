@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { VaultConfig, SetupStep } from "@/lib/types/vault";
+import type { VaultConfig, SetupStep, VaultScreen } from "@/lib/types/vault";
 
 const DEFAULT_CONFIG: VaultConfig = {
   totalDevices: 3,
@@ -17,6 +17,7 @@ const DEFAULT_CONFIG: VaultConfig = {
 };
 
 export function useVaultSetup() {
+  const [screen, setScreen] = useState<VaultScreen>("home");
   const [step, setStep] = useState<SetupStep>(1);
   const [config, setConfig] = useState<VaultConfig>(DEFAULT_CONFIG);
 
@@ -35,5 +36,21 @@ export function useVaultSetup() {
     4: true,
   };
 
-  return { step, setStep, config, updateConfig, canAdvance };
+  const startSetup = () => {
+    setScreen("setup");
+    setStep(1);
+    setConfig(DEFAULT_CONFIG);
+  };
+
+  const completeVault = () => {
+    setScreen("success");
+  };
+
+  const reset = () => {
+    setScreen("home");
+    setStep(1);
+    setConfig(DEFAULT_CONFIG);
+  };
+
+  return { screen, setScreen, step, setStep, config, updateConfig, canAdvance, startSetup, completeVault, reset };
 }
