@@ -1,17 +1,19 @@
 "use client";
-// parsed
+
 import { useState, useCallback } from "react";
 import type { VaultConfig, XpubEntry } from "@/lib/types/vault";
+import { useWallet } from "@/context/WalletContext";
 import {
   parseXpub,
   validateDerivationPath,
   truncateXpub,
   STANDARD_PATHS,
-  TESTNET_PATHS, // Para testear con testnet
+  TESTNET_PATHS,
 } from "@/lib/bitcoin/xpub";
 import { cn } from "@/lib/utils";
-import { Check, AlertCircle, ChevronDown, Trash2, HardDrive } from "lucide-react";
+import { AlertCircle, ChevronDown, Trash2, Smartphone, Laptop, Settings, Sparkles, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Term } from "@/components/ui/Term";
 
 interface Props {
   config: VaultConfig;
@@ -25,12 +27,31 @@ const EMPTY_KEY = (index: number): XpubEntry => ({
   fingerprint: "",
   derivationPath: "m/48'/0'/0'/2'",
   isValid: false,
+  deviceType: "laptop",
 });
+
+const TEST_KEYS = [
+  {
+    xpub: "tpubD6NzVbkrYhZ4XvtwtJAAVNFzGVq1K889Na8wnLddjVFgRmTXroMotMvMNmL2ddAXoEMcSox9Jr5uzqu8vvGPMq8UfQ9xXpVZKRwadPJWVZD",
+    fingerprint: "00000000",
+    derivationPath: "m/48'/1'/0'/2'"
+  },
+  {
+    xpub: "tpubD6NzVbkrYhZ4Xq2ArdoixK1nWTiY7jmXA5nYPCosK7mAE5YThnejXwa7wE1pmMzFBc75Rm55EAFdcwXnCmWiNafeBtYy1MRnczRUcWjpK3Z",
+    fingerprint: "00000000",
+    derivationPath: "m/48'/1'/0'/2'"
+  },
+  {
+    xpub: "tpubD6NzVbkrYhZ4XyJPQdsbmficgimFGSZa1a331bRtdNyqKecyFDXaHSSeFmDqNWMNT186NsZ1r3juvSkHWXRPU5jSBr8orMuDt7Rpo2ocCsQ",
+    fingerprint: "00000000",
+    derivationPath: "m/48'/1'/0'/2'"
+  }
+];
 
 export function Step2Keys({ config, onChange }: Props) {
   const { totalDevices, keys, network } = config;
+  const { experienceLevel } = useWallet();
 
-  // Inicializa slots vacíos si hacen falta
   const entries: XpubEntry[] = Array.from({ length: totalDevices }, (_, i) =>
     keys[i] ?? EMPTY_KEY(i)
   );
@@ -53,7 +74,6 @@ export function Step2Keys({ config, onChange }: Props) {
       isValid: parsed.isValid && validateDerivationPath(
         entries.find((e) => e.id === id)?.derivationPath ?? ""
       ),
-      ...(parsed.error ? {} : {}),
     });
   };
 
@@ -65,39 +85,59 @@ export function Step2Keys({ config, onChange }: Props) {
     setShowPathDropdown(null);
   };
 
+  const loadTestKey = (id: string, index: number) => {
+    const testKey = TEST_KEYS[index % TEST_KEYS.length];
+    const parsed = parseXpub(testKey.xpub, network);
+    updateEntry(id, {
+      xpub: testKey.xpub,
+      fingerprint: parsed.fingerprint || testKey.fingerprint,
+      derivationPath: testKey.derivationPath,
+      isValid: parsed.isValid
+    });
+  };
+
   const validCount = entries.filter((e) => e.isValid).length;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6 transition-all duration-300">
       {/* Header */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold">Vincula tus dispositivos</h2>
-        <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-          Importa la llave pública extendida (XPUB/ZPUB) de cada dispositivo.
+        <h2 className="text-2xl font-bold text-white">
+          {experienceLevel === "beginner" ? "Registra tus dispositivos" : "Vincula tus llaves criptográficas"}
+        </h2>
+        <p className="text-sm text-zinc-400 mt-2">
+          {experienceLevel === "beginner" ? (
+            "Conecta tus llaves. Pega el código de lectura de cada dispositivo para continuar."
+          ) : (
+            <span>
+              Importa la <Term name="xpub" /> de cada dispositivo para tu bóveda multisig.
+            </span>
+          )}
         </p>
       </div>
 
       {/* Progreso */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="flex-1 h-1 sm:h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+      <div className="flex items-center gap-3 bg-zinc-900/20 p-3 rounded-xl border border-zinc-900">
+        <div className="flex-1 h-2 rounded-full bg-zinc-850 overflow-hidden">
           <div
-            className="h-full bg-orange-500 rounded-full transition-all duration-500"
+            className="h-full bg-[#6366f1] rounded-full transition-all duration-500 ease-out"
             style={{ width: `${(validCount / totalDevices) * 100}%` }}
           />
         </div>
-        <span className="text-[10px] sm:text-xs font-mono text-zinc-400 shrink-0">
-          {validCount}/{totalDevices}
+        <span className="text-xs font-mono text-zinc-400 font-bold shrink-0">
+          {validCount} de {totalDevices} listos
         </span>
       </div>
 
       {/* Tarjetas de dispositivo */}
-      <div className="space-y-3 sm:space-y-4">
+      <div className="space-y-4">
         {entries.map((entry, i) => (
           <DeviceKeyCard
             key={entry.id}
             entry={entry}
             index={i}
             network={network}
+            experienceLevel={experienceLevel}
             showPathDropdown={showPathDropdown === entry.id}
             onToggleDropdown={() =>
               setShowPathDropdown((prev) =>
@@ -107,6 +147,7 @@ export function Step2Keys({ config, onChange }: Props) {
             onXpubChange={(v) => handleXpubChange(entry.id, v)}
             onPathChange={(p) => handlePathChange(entry.id, p)}
             onLabelChange={(l) => updateEntry(entry.id, { label: l })}
+            onTypeChange={(t) => updateEntry(entry.id, { deviceType: t, label: t === "mobile" ? "Billetera Celular" : "Billetera Laptop" })}
             onClear={() =>
               onChange({
                 keys: entries.map((e) =>
@@ -114,6 +155,7 @@ export function Step2Keys({ config, onChange }: Props) {
                 ),
               })
             }
+            onLoadTestKey={() => loadTestKey(entry.id, i)}
           />
         ))}
       </div>
@@ -127,154 +169,209 @@ interface CardProps {
   entry: XpubEntry;
   index: number;
   network: "mainnet" | "testnet";
+  experienceLevel: "beginner" | "intermediate" | "advanced";
   showPathDropdown: boolean;
   onToggleDropdown: () => void;
   onXpubChange: (v: string) => void;
   onPathChange: (p: string) => void;
   onLabelChange: (l: string) => void;
+  onTypeChange: (t: "mobile" | "laptop") => void;
   onClear: () => void;
+  onLoadTestKey: () => void;
 }
 
 function DeviceKeyCard({
-  entry, index, showPathDropdown, network, //cambios para el tesnet
-  onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onClear,
+  entry, index, showPathDropdown, network, experienceLevel,
+  onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onTypeChange, onClear, onLoadTestKey
 }: CardProps) {
+  const { setActiveHelp, activeHelp } = useWallet();
+  const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
   const hasXpub = entry.xpub.length > 0;
   const hasError = hasXpub && !entry.isValid;
+
+  const helpTitle = `Ayuda: ${entry.label}`;
+  const isHelpActive = activeHelp?.title === helpTitle;
+
+  const handleHelpClick = () => {
+    if (isHelpActive) {
+      setActiveHelp(null);
+    } else {
+      const text = entry.deviceType === "mobile"
+        ? "Abre tu app en el teléfono (ej: BlueWallet). Ve a Ajustes, luego selecciona Mostrar Llave Pública (XPUB) y copia el código completo para pegarlo aquí."
+        : "Abre tu software de escritorio (ej: Sparrow Wallet). Ve a Configuración de la Wallet, selecciona Wallet Info, copia la XPUB y pégala aquí.";
+      setActiveHelp({ title: helpTitle, text });
+    }
+  };
 
   return (
     <div
       className={cn(
-        "rounded-xl border p-4 space-y-3 transition-all",
+        "relative overflow-hidden rounded-xl border flex flex-col md:flex-row items-stretch transition-all duration-300 ease-in-out",
         entry.isValid
-          ? "border-emerald-800/60 bg-emerald-950/20"
+          ? "border-emerald-805/40 bg-emerald-955/5"
           : hasError
-          ? "border-red-800/60 bg-red-950/10"
-          : "border-zinc-800 bg-zinc-900/50"
+          ? "border-red-805/40 bg-red-955/5"
+          : "border-[#1e2640] bg-[#121626]/40"
       )}
     >
-      {/* Fila superior: índice + label + estado */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div
-          className={cn(
-            "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 text-sm sm:text-base",
-            entry.isValid ? "bg-emerald-500/20" : "bg-zinc-800"
-          )}
-        >
-          {entry.isValid ? (
-            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-          ) : (
-            <HardDrive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
-          )}
-        </div>
-        <input
-          className="flex-1 bg-transparent text-xs sm:text-sm font-medium text-white placeholder:text-zinc-600 outline-none"
-          value={entry.label}
-          onChange={(e) => onLabelChange(e.target.value)}
-          placeholder={`Dispositivo ${index + 1}`}
-        />
-        {hasXpub && (
-          <button onClick={onClear} className="text-zinc-600 hover:text-red-400 transition-colors shrink-0">
-            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-        )}
-      </div>
+      {/* Contenido Principal */}
+      <div className="flex-1 p-4 space-y-3">
+        {/* Fila superior: dispositivo selector + label */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-1.5 shrink-0">
+            <button
+              onClick={() => onTypeChange("mobile")}
+              className={cn("w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300", entry.deviceType === "mobile" ? "bg-[#6366f1] text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300")}
+              title="Billetera Celular"
+            >
+              <Smartphone className="w-4.5 h-4.5" />
+            </button>
+            <button
+              onClick={() => onTypeChange("laptop")}
+              className={cn("w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300", entry.deviceType === "laptop" ? "bg-[#6366f1] text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300")}
+              title="Billetera Laptop"
+            >
+              <Laptop className="w-4.5 h-4.5" />
+            </button>
+          </div>
 
-      {/* XPUB textarea */}
-      <textarea
-        rows={2}
-        spellCheck={false}
-        className={cn(
-          "w-full rounded-lg border px-3 py-2 text-xs font-mono bg-zinc-950 text-zinc-300",
-          "placeholder:text-zinc-700 outline-none resize-none transition-colors",
-          hasError
-            ? "border-red-700 focus:border-red-500"
-            : entry.isValid
-            ? "border-emerald-800 focus:border-emerald-600"
-            : "border-zinc-800 focus:border-orange-500/60"
-        )}
-        value={entry.xpub}
-        onChange={(e) => onXpubChange(e.target.value)}
-        placeholder="xpub6... o zpub..."
-      />
+          <input
+            className="flex-1 bg-transparent text-base font-semibold text-white placeholder:text-zinc-700 outline-none ml-2 border-b border-transparent hover:border-zinc-850 focus:border-[#6366f1]/50 py-0.5 transition-all duration-200"
+            value={entry.label}
+            onChange={(e) => onLabelChange(e.target.value)}
+            placeholder={entry.deviceType === "mobile" ? "Billetera Celular" : "Billetera Laptop"}
+          />
 
-      {/* Error message */}
-      {hasError && (
-        <p className="flex items-center gap-1.5 text-xs text-red-400">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          XPUB no válido — verifica que sea para la red correcta
-        </p>
-      )}
-
-      {/* Fila inferior: fingerprint + derivation path */}
-      <div className="flex items-center gap-3">
-        {/* Fingerprint (readonly) */}
-        <div className="flex-1">
-          <label className="text-[10px] uppercase tracking-widest text-zinc-600 font-mono">
-            Fingerprint
-          </label>
-          <div className="mt-1 px-2 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 flex items-center">
-            {entry.fingerprint || (
-              <span className="text-zinc-700">——————</span>
+          <div className="flex items-center gap-2">
+            {!hasXpub && (
+              <button
+                onClick={onLoadTestKey}
+                className="text-xs text-zinc-350 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-lg border border-[#2c3558] transition-all duration-300 font-medium"
+                title="Cargar una llave de prueba"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
+                Prueba
+              </button>
+            )}
+            {hasXpub && (
+              <button onClick={onClear} className="text-zinc-500 hover:text-red-400 p-1.5 transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
           </div>
         </div>
 
-        {/* Derivation path selector */}
-        <div className="flex-1 relative">
-          <label className="text-[10px] uppercase tracking-widest text-zinc-600 font-mono">
-            Ruta de Derivación
-          </label>
-          <button
-            onClick={onToggleDropdown}
-            className={cn(
-              "mt-1 w-full px-2 py-1 rounded-md border text-xs font-mono text-left",
-              "flex items-center justify-between h-7 transition-colors",
-              showPathDropdown
-                ? "border-orange-500/60 bg-zinc-900 text-orange-400"
-                : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"
-            )}
-          >
-            <span className="truncate">{entry.derivationPath || "Seleccionar"}</span>
-            <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
-          </button>
+        {/* Input de Llave */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-zinc-400 uppercase tracking-wider font-mono font-bold">
+              <Term name="xpub" />
+            </label>
+            <button
+              type="button"
+              onClick={handleHelpClick}
+              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", isHelpActive && "text-[#818cf8]")}
+              title="¿Cómo obtengo esta llave?"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
 
-          {showPathDropdown && (
-            <div className="absolute z-50 top-full mt-1 left-0 w-64 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
-              {Object.entries(network === "testnet" ? TESTNET_PATHS : STANDARD_PATHS).map(([label, path]) => ( // Cambios para tesnet
-                <button
-                  key={path}
-                  onClick={() => onPathChange(path)}
-                  className="w-full px-4 py-3 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
-                >
-                  <div className="text-xs font-medium text-zinc-300">{label}</div>
-                  <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
-                </button>
-              ))}
-              {/* Path personalizado */}
-              <div className="px-3 py-2 border-t border-zinc-800">
-                <input
-                  className="w-full bg-transparent text-xs font-mono text-zinc-400 outline-none placeholder:text-zinc-700"
-                  placeholder="m/48'/0'/0'/2' personalizado"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onPathChange(e.currentTarget.value);
-                  }}
-                />
+          <textarea
+            rows={2}
+            spellCheck={false}
+            className={cn(
+              "w-full rounded-lg border px-3 py-2 text-xs font-mono bg-zinc-950 text-zinc-350",
+              "placeholder:text-zinc-700 outline-none resize-none transition-all duration-300",
+              hasError
+                ? "border-red-750 focus:border-red-500"
+                : entry.isValid
+                ? "border-emerald-850 focus:border-emerald-600"
+                : "border-zinc-850 focus:border-[#6366f1]/60"
+            )}
+            value={entry.xpub}
+            onChange={(e) => onXpubChange(e.target.value)}
+            placeholder={experienceLevel === "beginner" ? "Pega el código de tu dispositivo aquí..." : "xpub6... o zpub..."}
+          />
+        </div>
+
+        {/* Mensaje de error */}
+        {hasError && (
+          <p className="flex items-center gap-1.5 text-xs text-red-400">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Código no válido. Asegúrate de copiarlo completo.
+          </p>
+        )}
+
+        {/* Detalles avanzados */}
+        {experienceLevel === "beginner" ? (
+          <div className="pt-1">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5 text-zinc-500" />
+              {showAdvanced ? "Ocultar ajustes técnicos" : "Ajustes técnicos de la llave"}
+            </button>
+          </div>
+        ) : null}
+
+        {showAdvanced && (
+          <div className="flex gap-4 pt-2 border-t border-[#1b223a] transition-all duration-300">
+            {/* Fingerprint */}
+            <div className="flex-1">
+              <span className="text-xs uppercase tracking-wider text-zinc-500 font-mono block mb-1">
+                <Term name="fingerprint" />
+              </span>
+              <div className="px-2 py-1 rounded bg-zinc-950 border border-zinc-850 text-xs font-mono text-zinc-400 h-8 flex items-center">
+                {entry.fingerprint || <span className="text-zinc-805">--------</span>}
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Badge válido */}
-      {entry.isValid && (
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-          {truncateXpub(entry.xpub)} · Profundidad {
-            parseXpub(entry.xpub).depth
-          }
-        </div>
-      )}
+            {/* Derivation Path */}
+            <div className="flex-1 relative">
+              <span className="text-xs uppercase tracking-wider text-zinc-500 font-mono block mb-1">
+                <Term name="derivation" />
+              </span>
+              <button
+                onClick={onToggleDropdown}
+                className={cn(
+                  "w-full px-2 py-1 rounded border text-xs font-mono text-left",
+                  "flex items-center justify-between h-8 transition-all duration-300 bg-zinc-950",
+                  showPathDropdown
+                    ? "border-[#6366f1]/60 text-[#818cf8]"
+                    : "border-zinc-850 text-zinc-400 hover:border-zinc-700"
+                )}
+              >
+                <span className="truncate">{entry.derivationPath}</span>
+                <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
+              </button>
+
+              {showPathDropdown && (
+                <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden transition-all duration-300">
+                  {Object.entries(network === "testnet" ? TESTNET_PATHS : STANDARD_PATHS).map(([label, path]) => (
+                    <button
+                      key={path}
+                      onClick={() => onPathChange(path)}
+                      className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-850 last:border-0"
+                    >
+                      <div className="text-xs font-bold text-zinc-300">{label}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Badge válido */}
+        {entry.isValid && (
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <span>Listo · {truncateXpub(entry.xpub)}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
