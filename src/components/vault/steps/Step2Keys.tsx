@@ -1,17 +1,16 @@
 "use client";
-// parsed
-import { useState, useCallback } from "react";
+
+import { useState, useCallback, useRef } from "react";
 import type { VaultConfig, XpubEntry } from "@/lib/types/vault";
 import {
   parseXpub,
   validateDerivationPath,
   truncateXpub,
   STANDARD_PATHS,
-  TESTNET_PATHS, // Para testear con testnet
 } from "@/lib/bitcoin/xpub";
+import { parseSparrowFile } from "@/lib/bitcoin/sparrow";
 import { cn } from "@/lib/utils";
-import { Check, AlertCircle, ChevronDown, Trash2, HardDrive } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, AlertCircle, ChevronDown, Trash2, HardDrive, Upload } from "lucide-react";
 
 interface Props {
   config: VaultConfig;
@@ -29,13 +28,13 @@ const EMPTY_KEY = (index: number): XpubEntry => ({
 
 export function Step2Keys({ config, onChange }: Props) {
   const { totalDevices, keys, network } = config;
+  const [showPathDropdown, setShowPathDropdown] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string>("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Inicializa slots vacíos si hacen falta
   const entries: XpubEntry[] = Array.from({ length: totalDevices }, (_, i) =>
     keys[i] ?? EMPTY_KEY(i)
   );
-
-  const [showPathDropdown, setShowPathDropdown] = useState<string | null>(null);
 
   const updateEntry = useCallback(
     (id: string, patch: Partial<XpubEntry>) => {
@@ -47,13 +46,12 @@ export function Step2Keys({ config, onChange }: Props) {
 
   const handleXpubChange = (id: string, raw: string) => {
     const parsed = parseXpub(raw, network);
+    const entry = entries.find((e) => e.id === id);
+    const validPath = validateDerivationPath(entry?.derivationPath ?? "");
     updateEntry(id, {
       xpub: raw,
       fingerprint: parsed.fingerprint,
-      isValid: parsed.isValid && validateDerivationPath(
-        entries.find((e) => e.id === id)?.derivationPath ?? ""
-      ),
-      ...(parsed.error ? {} : {}),
+      isValid: parsed.isValid && validPath,
     });
   };
 
@@ -63,6 +61,39 @@ export function Step2Keys({ config, onChange }: Props) {
     const valid = parseXpub(entry.xpub, network).isValid && validateDerivationPath(path);
     updateEntry(id, { derivationPath: path, isValid: valid });
     setShowPathDropdown(null);
+  };
+
+  const handleSparrowImport = (file: File) => {
+    setImportError("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const result = parseSparrowFile(content);
+
+      if (result.error) {
+        setImportError(result.error);
+        return;
+      }
+
+      if (result.keys.length === 0) {
+        setImportError("No se encontraron llaves en el archivo");
+        return;
+      }
+
+      const newTotal = result.totalDevices ?? totalDevices;
+      const merged = Array.from({ length: newTotal }, (_, i) =>
+        result.keys[i]
+          ? { ...result.keys[i], id: entries[i]?.id ?? crypto.randomUUID() }
+          : entries[i] ?? EMPTY_KEY(i)
+      );
+
+      onChange({
+        keys: merged,
+        totalDevices: newTotal,
+        ...(result.requiredApprovals && { requiredApprovals: result.requiredApprovals }),
+      });
+    };
+    reader.readAsText(file);
   };
 
   const validCount = entries.filter((e) => e.isValid).length;
@@ -77,6 +108,50 @@ export function Step2Keys({ config, onChange }: Props) {
         </p>
       </div>
 
+      {/* Import Sparrow */}
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const file = e.dataTransfer.files[0];
+          if (file) handleSparrowImport(file);
+        }}
+        onClick={() => fileRef.current?.click()}
+        className={cn(
+          "flex items-center gap-3 rounded-xl border border-dashed border-zinc-700",
+          "bg-zinc-900/30 px-4 py-3 cursor-pointer hover:border-orange-500/40",
+          "hover:bg-orange-500/5 transition-all group"
+        )}
+      >
+        <Upload className="w-4 h-4 text-zinc-600 group-hover:text-orange-400 transition-colors shrink-0" />
+        <div>
+          <span className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">
+            Importar configuración desde Sparrow
+          </span>
+          <p className="text-xs text-zinc-600 mt-0.5">
+            Arrastra wallet.json o descriptor.txt · Autocompleta todas las tarjetas
+          </p>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleSparrowImport(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {importError && (
+        <p className="flex items-center gap-1.5 text-xs text-red-400">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {importError}
+        </p>
+      )}
+
       {/* Progreso */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
@@ -90,7 +165,7 @@ export function Step2Keys({ config, onChange }: Props) {
         </span>
       </div>
 
-      {/* Tarjetas de dispositivo */}
+      {/* Tarjetas */}
       <div className="space-y-4">
         {entries.map((entry, i) => (
           <DeviceKeyCard
@@ -100,19 +175,13 @@ export function Step2Keys({ config, onChange }: Props) {
             network={network}
             showPathDropdown={showPathDropdown === entry.id}
             onToggleDropdown={() =>
-              setShowPathDropdown((prev) =>
-                prev === entry.id ? null : entry.id
-              )
+              setShowPathDropdown((prev) => (prev === entry.id ? null : entry.id))
             }
             onXpubChange={(v) => handleXpubChange(entry.id, v)}
             onPathChange={(p) => handlePathChange(entry.id, p)}
             onLabelChange={(l) => updateEntry(entry.id, { label: l })}
             onClear={() =>
-              onChange({
-                keys: entries.map((e) =>
-                  e.id === entry.id ? EMPTY_KEY(i) : e
-                ),
-              })
+              onChange({ keys: entries.map((e) => (e.id === entry.id ? EMPTY_KEY(i) : e)) })
             }
           />
         ))}
@@ -120,8 +189,6 @@ export function Step2Keys({ config, onChange }: Props) {
     </div>
   );
 }
-
-/* ─── Subcomponente tarjeta ─────────────────────────────────────────────── */
 
 interface CardProps {
   entry: XpubEntry;
@@ -136,36 +203,31 @@ interface CardProps {
 }
 
 function DeviceKeyCard({
-  entry, index, showPathDropdown, network, //cambios para el tesnet
+  entry, index, network, showPathDropdown,
   onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onClear,
 }: CardProps) {
   const hasXpub = entry.xpub.length > 0;
   const hasError = hasXpub && !entry.isValid;
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border p-4 space-y-3 transition-all",
-        entry.isValid
-          ? "border-emerald-800/60 bg-emerald-950/20"
-          : hasError
-          ? "border-red-800/60 bg-red-950/10"
-          : "border-zinc-800 bg-zinc-900/50"
-      )}
-    >
-      {/* Fila superior: índice + label + estado */}
+    <div className={cn(
+      "rounded-xl border p-4 space-y-3 transition-all",
+      entry.isValid
+        ? "border-emerald-800/60 bg-emerald-950/20"
+        : hasError
+        ? "border-red-800/60 bg-red-950/10"
+        : "border-zinc-800 bg-zinc-900/50"
+    )}>
+      {/* Fila superior */}
       <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-            entry.isValid ? "bg-emerald-500/20" : "bg-zinc-800"
-          )}
-        >
-          {entry.isValid ? (
-            <Check className="w-4 h-4 text-emerald-400" />
-          ) : (
-            <HardDrive className="w-4 h-4 text-zinc-500" />
-          )}
+        <div className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+          entry.isValid ? "bg-emerald-500/20" : "bg-zinc-800"
+        )}>
+          {entry.isValid
+            ? <Check className="w-4 h-4 text-emerald-400" />
+            : <HardDrive className="w-4 h-4 text-zinc-500" />
+          }
         </div>
         <input
           className="flex-1 bg-transparent text-sm font-medium text-white placeholder:text-zinc-600 outline-none"
@@ -180,7 +242,7 @@ function DeviceKeyCard({
         )}
       </div>
 
-      {/* XPUB textarea */}
+      {/* XPUB */}
       <textarea
         rows={2}
         spellCheck={false}
@@ -198,7 +260,6 @@ function DeviceKeyCard({
         placeholder="xpub6... o zpub..."
       />
 
-      {/* Error message */}
       {hasError && (
         <p className="flex items-center gap-1.5 text-xs text-red-400">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -206,21 +267,17 @@ function DeviceKeyCard({
         </p>
       )}
 
-      {/* Fila inferior: fingerprint + derivation path */}
+      {/* Fingerprint + path */}
       <div className="flex items-center gap-3">
-        {/* Fingerprint (readonly) */}
         <div className="flex-1">
           <label className="text-[10px] uppercase tracking-widest text-zinc-600 font-mono">
             Fingerprint
           </label>
           <div className="mt-1 px-2 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 flex items-center">
-            {entry.fingerprint || (
-              <span className="text-zinc-700">——————</span>
-            )}
+            {entry.fingerprint || <span className="text-zinc-700">——————</span>}
           </div>
         </div>
 
-        {/* Derivation path selector */}
         <div className="flex-1 relative">
           <label className="text-[10px] uppercase tracking-widest text-zinc-600 font-mono">
             Ruta de Derivación
@@ -241,7 +298,7 @@ function DeviceKeyCard({
 
           {showPathDropdown && (
             <div className="absolute z-50 top-full mt-1 left-0 w-64 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
-              {Object.entries(network === "testnet" ? TESTNET_PATHS : STANDARD_PATHS).map(([label, path]) => ( // Cambios para tesnet
+              {Object.entries(STANDARD_PATHS).map(([label, path]) => (
                 <button
                   key={path}
                   onClick={() => onPathChange(path)}
@@ -251,7 +308,6 @@ function DeviceKeyCard({
                   <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
                 </button>
               ))}
-              {/* Path personalizado */}
               <div className="px-3 py-2 border-t border-zinc-800">
                 <input
                   className="w-full bg-transparent text-xs font-mono text-zinc-400 outline-none placeholder:text-zinc-700"
@@ -270,9 +326,7 @@ function DeviceKeyCard({
       {entry.isValid && (
         <div className="flex items-center gap-1.5 text-xs text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-          {truncateXpub(entry.xpub)} · Profundidad {
-            parseXpub(entry.xpub).depth
-          }
+          {truncateXpub(entry.xpub)} · Profundidad {parseXpub(entry.xpub).depth}
         </div>
       )}
     </div>

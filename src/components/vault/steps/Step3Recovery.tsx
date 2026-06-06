@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { VaultConfig, TimelockConfig, XpubEntry } from "@/lib/types/vault";
 import { blocksToHuman } from "@/lib/bitcoin/timelock";
 import { parseXpub, validateDerivationPath, STANDARD_PATHS } from "@/lib/bitcoin/xpub";
+import { isDevMode, DEV_PRESETS, PROD_PRESETS } from "@/lib/dev-mode";
 import { cn } from "@/lib/utils";
 import {
   Shield, Users, UserPlus, ChevronDown,
@@ -14,13 +15,6 @@ interface Props {
   config: VaultConfig;
   onChange: (p: Partial<VaultConfig>) => void;
 }
-
-const PERIOD_PRESETS = [
-  { label: "3 meses", blocks: 12960  },
-  { label: "6 meses", blocks: 25920  },
-  { label: "1 año",   blocks: 52560  },
-  { label: "2 años",  blocks: 105120 },
-];
 
 const EMPTY_TRUSTED_KEY = (): XpubEntry => ({
   id: crypto.randomUUID(),
@@ -34,16 +28,14 @@ const EMPTY_TRUSTED_KEY = (): XpubEntry => ({
 export function Step3Recovery({ config, onChange }: Props) {
   const { timelock, requiredApprovals, totalDevices } = config;
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const devMode = isDevMode();
+  const presets = devMode ? [...DEV_PRESETS, ...PROD_PRESETS] : PROD_PRESETS;
 
   const update = (patch: Partial<TimelockConfig>) =>
     onChange({ timelock: { ...timelock, ...patch } });
 
   const maxRecoveryApprovals = Math.max(1, requiredApprovals - 1);
   const sliderHasRange = maxRecoveryApprovals > 1;
-  // El paso 3 está completo si eligieron modo
-  const step3Complete =
-    timelock.recoveryMode === "current-keys" ||
-    (timelock.recoveryMode === "trusted-person" && !!timelock.trustedKey?.isValid);
 
   const handleTrustedXpub = (raw: string) => {
     const parsed = parseXpub(raw, config.network);
@@ -115,8 +107,16 @@ export function Step3Recovery({ config, onChange }: Props) {
 
           {/* PASO 1 — Período */}
           <Section index={1} title="¿Cuánto tiempo de inactividad activa el plan?">
+            {devMode && (
+              <div className="flex items-center gap-2 mb-3 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 w-fit">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">
+                  Modo Desarrollador
+                </span>
+              </div>
+            )}
             <div className="flex gap-2 flex-wrap">
-              {PERIOD_PRESETS.map((p) => (
+              {presets.map((p) => (
                 <button
                   key={p.blocks}
                   onClick={() => update({ blocks: p.blocks })}
@@ -124,7 +124,10 @@ export function Step3Recovery({ config, onChange }: Props) {
                     "px-4 py-2 rounded-lg border text-sm transition-all",
                     timelock.blocks === p.blocks
                       ? "border-orange-500 bg-orange-500/10 text-orange-400 font-medium"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700"
+                      : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700",
+                    devMode && p.blocks <= 144
+                      ? "border-amber-900/40 text-amber-600 hover:border-amber-700"
+                      : ""
                   )}
                 >
                   {p.label}
@@ -158,8 +161,6 @@ export function Step3Recovery({ config, onChange }: Props) {
                 description="Abogado, familiar, heredero"
               />
             </div>
-
-            {/* FIX 1: aviso si no han elegido nada aún */}
             {!timelock.recoveryMode && (
               <p className="flex items-center gap-1.5 text-xs text-amber-400 mt-2">
                 <Info className="w-3.5 h-3.5 shrink-0" />
@@ -168,10 +169,9 @@ export function Step3Recovery({ config, onChange }: Props) {
             )}
           </Section>
 
-          {/* PASO 3 — Config específica */}
+          {/* PASO 3a — current-keys */}
           {timelock.recoveryMode === "current-keys" && (
             <Section index={3} title="¿Cuántas firmas se necesitarán para recuperar?">
-              {/* FIX 2: slider condicional */}
               {sliderHasRange ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
@@ -196,18 +196,16 @@ export function Step3Recovery({ config, onChange }: Props) {
                   </div>
                 </div>
               ) : (
-                // Texto estático cuando solo hay una opción posible
                 <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
                   <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
                     <span className="text-orange-400 font-bold font-mono">1</span>
                   </div>
                   <div className="text-sm text-zinc-300">
-                    Con <span className="text-white font-medium">cualquiera de tus {totalDevices} dispositivos</span> podrás
-                    recuperar los fondos tras el período de inactividad.
+                    Con <span className="text-white font-medium">cualquiera de tus {totalDevices} dispositivos</span>{" "}
+                    podrás recuperar los fondos tras el período de inactividad.
                   </div>
                 </div>
               )}
-
               <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-400 mt-3">
                 Hoy necesitas{" "}
                 <span className="text-white font-medium">{requiredApprovals} firmas</span>.
@@ -221,6 +219,7 @@ export function Step3Recovery({ config, onChange }: Props) {
             </Section>
           )}
 
+          {/* PASO 3b — trusted-person */}
           {timelock.recoveryMode === "trusted-person" && (
             <Section index={3} title="Llave de la persona de confianza">
               <TrustedKeyInput
@@ -236,9 +235,7 @@ export function Step3Recovery({ config, onChange }: Props) {
                 <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-400 mt-2">
                   Tras <span className="text-white">{blocksToHuman(timelock.blocks)}</span> de
                   inactividad,{" "}
-                  <span className="text-orange-400 font-medium">
-                    {timelock.trustedKey.label}
-                  </span>{" "}
+                  <span className="text-orange-400 font-medium">{timelock.trustedKey.label}</span>{" "}
                   podrá mover los fondos por su cuenta.
                 </div>
               )}
@@ -259,7 +256,6 @@ export function Step3Recovery({ config, onChange }: Props) {
 
           {showAdvanced && (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 space-y-4">
-              {/* FIX 3: tipo timelock con warning en absoluto */}
               <div>
                 <label className="text-xs uppercase tracking-widest text-zinc-600 font-mono">
                   Tipo de timelock
@@ -285,27 +281,24 @@ export function Step3Recovery({ config, onChange }: Props) {
                     </button>
                   ))}
                 </div>
-
                 {timelock.type === "absolute" && (
                   <div className="flex gap-2 mt-3 rounded-lg border border-amber-800/40 bg-amber-950/20 p-3">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-300/80 leading-relaxed">
                       <span className="font-medium text-amber-300">Advertencia:</span> Un timelock
                       absoluto expira en una altura de bloque fija y no se puede renovar sin gastar
-                      primero. Si no actúas antes de esa altura, la ruta de recuperación quedará
-                      permanentemente activa. Usa relativo salvo que sepas exactamente lo que haces.
+                      primero. Usa relativo salvo que sepas exactamente lo que haces.
                     </p>
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="text-xs uppercase tracking-widest text-zinc-600 font-mono">
                   Bloques exactos
                 </label>
                 <input
                   type="number"
-                  min={1008}
+                  min={1}
                   max={105120}
                   value={timelock.blocks}
                   onChange={(e) => update({ blocks: Number(e.target.value) })}
@@ -315,13 +308,11 @@ export function Step3Recovery({ config, onChange }: Props) {
             </div>
           )}
 
-          {/* FIX 1: indicador de completitud al fondo */}
-          {!step3Complete && timelock.recoveryMode && (
+          {/* Indicador completitud */}
+          {timelock.recoveryMode === "trusted-person" && !timelock.trustedKey?.isValid && (
             <p className="flex items-center gap-1.5 text-xs text-amber-400">
               <Info className="w-3.5 h-3.5 shrink-0" />
-              {timelock.recoveryMode === "trusted-person"
-                ? "Añade el XPUB de tu persona de confianza para continuar"
-                : "Selecciona quién puede recuperar los fondos"}
+              Añade el XPUB de tu persona de confianza para continuar
             </p>
           )}
         </div>
