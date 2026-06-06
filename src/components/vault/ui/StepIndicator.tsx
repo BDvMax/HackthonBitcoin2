@@ -16,17 +16,17 @@ export function StepIndicator({ steps, currentStep }: Props) {
               <div
                 className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all",
-                  done && "bg-orange-500 text-black",
-                  active && "bg-zinc-800 border-2 border-orange-500 text-orange-400",
-                  !done && !active && "bg-zinc-900 border border-zinc-700 text-zinc-600"
+                  done && "bg-[#6366f1] text-white",
+                  active && "bg-zinc-800 border-2 border-[#6366f1] text-[#818cf8]",
+                  !done && !active && "bg-zinc-900 border border-zinc-700 text-zinc-650"
                 )}
               >
                 {done ? <Check className="w-4 h-4" /> : s.id}
               </div>
               <span
                 className={cn(
-                  "mt-1.5 text-[10px] tracking-wide",
-                  active ? "text-orange-400" : "text-zinc-600"
+                  "mt-1.5 text-xs tracking-wide",
+                  active ? "text-[#818cf8]" : "text-zinc-550"
                 )}
               >
                 {s.label}
@@ -36,7 +36,7 @@ export function StepIndicator({ steps, currentStep }: Props) {
               <div
                 className={cn(
                   "w-16 h-px mb-4 mx-1 transition-all",
-                  done ? "bg-orange-500" : "bg-zinc-800"
+                  done ? "bg-[#6366f1]" : "bg-zinc-800"
                 )}
               />
             )}

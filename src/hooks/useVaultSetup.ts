@@ -5,8 +5,15 @@ const DEFAULT_CONFIG: VaultConfig = {
   totalDevices: 3,
   requiredApprovals: 2,
   keys: [],
-  timelock: { enabled: false, type: "relative", blocks: 1008 },
-  network: "testnet", // "mainnet"
+  timelock: {
+    enabled: false,
+    type: "relative",
+    blocks: 25920,
+    recoveryMode: "current-keys",
+    recoveryApprovals: 1,
+    trustedKey: null,
+  },
+  network: "testnet",
 };
 
 export function useVaultSetup() {
@@ -20,7 +27,12 @@ export function useVaultSetup() {
   const canAdvance: Record<SetupStep, boolean> = {
     1: config.requiredApprovals <= config.totalDevices,
     2: config.keys.filter((k) => k.isValid).length === config.totalDevices,
-    3: true,
+    3: !config.timelock.enabled || (
+      !!config.timelock.recoveryMode && (
+        config.timelock.recoveryMode === "current-keys" ||
+        !!config.timelock.trustedKey?.isValid
+      )
+    ),
     4: true,
   };
 
