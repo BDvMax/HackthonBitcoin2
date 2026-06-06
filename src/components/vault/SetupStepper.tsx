@@ -10,7 +10,7 @@ import { Step4Export } from "./steps/Step4Export";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud, Check, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SetupStep, VaultConfig } from "@/lib/types/vault";
+import type { SetupStep, TimelockConfig, VaultConfig, XpubEntry } from "@/lib/types/vault";
 
 const STEPS = [
   { id: 1, label: "Dispositivos" },
@@ -18,6 +18,19 @@ const STEPS = [
   { id: 3, label: "Recuperación" },
   { id: 4, label: "Exportar" },
 ] as const;
+
+type ImportedVaultFile = Partial<VaultConfig> & {
+  descriptor?: string;
+};
+
+const DEFAULT_TIMELOCK: TimelockConfig = {
+  enabled: false,
+  type: "relative",
+  blocks: 25920,
+  recoveryMode: "current-keys",
+  recoveryApprovals: 1,
+  trustedKey: null,
+};
 
 function SetupStepperContent() {
   const { step, setStep, config, updateConfig, canAdvance, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp } = useWallet();
@@ -34,23 +47,72 @@ function SetupStepperContent() {
     4: <Step4Export config={config} />,
   };
 
-  const applyImportedConfig = (candidate: Partial<VaultConfig>) => {
-    if (
-      typeof candidate.totalDevices !== "number" ||
-      typeof candidate.requiredApprovals !== "number" ||
-      !Array.isArray(candidate.keys) ||
-      !candidate.timelock ||
-      (candidate.network !== "mainnet" && candidate.network !== "testnet")
-    ) {
-      throw new Error("El archivo no parece ser un kit de recuperacion valido.");
+  const inferRequiredApprovals = (candidate: ImportedVaultFile) => {
+    if (typeof candidate.requiredApprovals === "number") return candidate.requiredApprovals;
+
+    const match = candidate.descriptor?.match(/sortedmulti\((\d+),/i);
+    if (match) return Number(match[1]);
+
+    return 2;
+  };
+
+  const normalizeKeys = (keys: ImportedVaultFile["keys"]): XpubEntry[] => {
+    if (!Array.isArray(keys)) return [];
+
+    return keys.map((key, index) => ({
+      id: key.id || (crypto.randomUUID ? crypto.randomUUID() : `imported-${Date.now()}-${index}`),
+      label: key.label || `Dispositivo ${index + 1}`,
+      xpub: key.xpub || "",
+      fingerprint: key.fingerprint || "",
+      derivationPath: key.derivationPath || "m/48'/1'/0'/2'",
+      isValid: typeof key.isValid === "boolean" ? key.isValid : Boolean(key.xpub),
+      deviceType: key.deviceType || (index === 0 ? "mobile" : "laptop"),
+    }));
+  };
+
+  const normalizeTimelock = (timelock: ImportedVaultFile["timelock"]): TimelockConfig | null => {
+    if (!timelock || typeof timelock !== "object") return null;
+
+    const recoveryMode =
+      timelock.recoveryMode === "trusted-person" ? "trusted-person" : "current-keys";
+
+    return {
+      ...DEFAULT_TIMELOCK,
+      ...timelock,
+      enabled: Boolean(timelock.enabled),
+      type: timelock.type === "absolute" ? "absolute" : "relative",
+      blocks: typeof timelock.blocks === "number" && timelock.blocks > 0
+        ? timelock.blocks
+        : DEFAULT_TIMELOCK.blocks,
+      recoveryMode,
+      recoveryApprovals: typeof timelock.recoveryApprovals === "number" && timelock.recoveryApprovals > 0
+        ? timelock.recoveryApprovals
+        : DEFAULT_TIMELOCK.recoveryApprovals,
+      trustedKey: timelock.trustedKey ? normalizeKeys([timelock.trustedKey])[0] : null,
+    };
+  };
+
+  const applyImportedConfig = (candidate: ImportedVaultFile) => {
+    const importedKeys = normalizeKeys(candidate.keys);
+    const timelock = normalizeTimelock(candidate.timelock);
+    const network = candidate.network === "mainnet" || candidate.network === "testnet"
+      ? candidate.network
+      : "testnet";
+    const totalDevices = typeof candidate.totalDevices === "number"
+      ? candidate.totalDevices
+      : importedKeys.length;
+    const requiredApprovals = inferRequiredApprovals(candidate);
+
+    if (!timelock || importedKeys.length === 0 || totalDevices === 0) {
+      throw new Error("El JSON no contiene una boveda completa. Usa el archivo descargado desde 'Descargar Archivo de Respaldo'.");
     }
 
     updateConfig({
-      totalDevices: candidate.totalDevices,
-      requiredApprovals: candidate.requiredApprovals,
-      keys: candidate.keys,
-      timelock: candidate.timelock,
-      network: candidate.network,
+      totalDevices,
+      requiredApprovals: Math.min(requiredApprovals, totalDevices),
+      keys: importedKeys,
+      timelock,
+      network,
     });
     setStep(4);
     setShowWelcome(false);
@@ -62,12 +124,25 @@ function SetupStepperContent() {
     if (!file) return;
 
     try {
-      const parsed = JSON.parse(await file.text()) as Partial<VaultConfig>;
+      const text = (await file.text()).replace(/^\uFEFF/, "").trim();
+
+      if (!text) {
+        throw new Error("El archivo JSON esta vacio. Selecciona el respaldo descargado desde la app.");
+      }
+
+      const parsed = JSON.parse(text) as ImportedVaultFile;
       applyImportedConfig(parsed);
     } catch (error) {
+      const message =
+        error instanceof SyntaxError
+          ? "No pude leer ese JSON. Parece estar incompleto o no tiene formato JSON valido."
+          : error instanceof Error
+            ? error.message
+            : "No se pudo leer el archivo.";
+
       setImportMessage({
         type: "error",
-        text: error instanceof Error ? error.message : "No se pudo leer el archivo.",
+        text: message,
       });
     } finally {
       event.target.value = "";

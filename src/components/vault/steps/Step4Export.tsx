@@ -65,13 +65,10 @@ export function Step4Export({ config }: Props) {
     const payload = JSON.stringify(
       {
         descriptor,
+        totalDevices: config.totalDevices,
+        requiredApprovals: config.requiredApprovals,
         network: config.network,
-        keys: config.keys.map((k) => ({
-          label: k.label,
-          fingerprint: k.fingerprint,
-          derivationPath: k.derivationPath,
-          xpub: k.xpub,
-        })),
+        keys: config.keys,
         timelock: config.timelock,
         createdAt: new Date().toISOString(),
       },
