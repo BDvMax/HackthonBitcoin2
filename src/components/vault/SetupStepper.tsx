@@ -552,7 +552,7 @@ function SetupStepperContent() {
         {step > 0 && (
           <button
             onClick={goBack}
-            className="hidden md:flex p-4 rounded-none-full border border-zinc-800 bg-[#121626]/80 hover:bg-[#181d33] hover:border-[#6366f1]/55 text-zinc-450 hover:text-white transition-all shadow-lg shrink-0 mt-20"
+            className="hidden md:flex p-4 rounded-none-full border border-zinc-800 bg-[#121626]/80 hover:bg-[#181d33] hover:border-[#6366f1]/55 text-zinc-450 hover:text-white transition-all shadow-lg shrink-0 mt-0"
             title="Atrás"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -684,75 +684,60 @@ function SetupStepperContent() {
 
               {/* Crisis/Losses Simulator in Sidebar */}
               {config.timelock.enabled && (
-                <div className="p-3.5 bg-[#181227]/60 border border-[#6366f1]/20 rounded-none-none space-y-3 transition-all duration-300 relative">
-                  <button
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setSimPopupPos(simPopupPos ? null : { x: rect.left - 260, y: rect.top });
-                    }}
-                    className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#a5b4fc] hover:text-white transition-colors"
-                  >
-                    <span>Simular Pérdida de Llaves</span>
-                    <Settings className={cn("w-4 h-4 transition-transform duration-200", simPopupPos && "rotate-90 text-[#818cf8]")} />
-                  </button>
+                <div className="p-3.5 bg-[#181227]/40 border border-[#6366f1]/20 rounded-none-none space-y-3 transition-all duration-300">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#a5b4fc]">
+                    <AlertTriangle className="w-4 h-4 text-[#818cf8]" />
+                    <span>Simulador de Crisis</span>
+                  </div>
+                  
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Simula la pérdida de dispositivos para probar la seguridad:
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Dispositivos perdidos:</div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {Array.from({ length: config.totalDevices + 1 }).map((_, n) => (
+                        <button
+                          key={n}
+                          onClick={() => {
+                            playToggle();
+                            setLostDevices(n);
+                          }}
+                          className={cn(
+                            "w-7 h-7 rounded-none-none border text-xs font-bold transition-all duration-300",
+                            lostDevices === n
+                              ? "border-[#6366f1] bg-[#6366f1]/20 text-[#818cf8] shadow-[0_0_8px_rgba(99,102,241,0.2)]"
+                              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-[#6366f1]/50 hover:text-zinc-300"
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-none-none bg-[#0a0c14] p-3 border border-zinc-800/80">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono mb-1.5">Diagnóstico de Bóveda</div>
+                    {remainingDevices >= config.requiredApprovals ? (
+                      <div className="text-xs text-emerald-400 flex items-start gap-1.5 font-medium leading-relaxed">
+                        <Check className="w-3.5 h-3.5 shrink-0 text-emerald-400 mt-0.5" />
+                        <span>Fondos seguros. Aún tienes {remainingDevices} firmas.</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[#a5b4fc] flex items-start gap-1.5 font-medium leading-relaxed">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-[#818cf8] mt-0.5" />
+                        <span>
+                          Recuperación activa tras esperar {blocksToHuman(config.timelock.blocks)}.
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-
-      {/* Simulator Popup */}
-      {simPopupPos && config.timelock.enabled && (
-        <div 
-          className="fixed z-[9999] w-72 p-5 bg-[#0f111a] border border-[#6366f1]/40 rounded-none-none shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-          style={{ left: Math.max(10, simPopupPos.x), top: Math.max(10, simPopupPos.y) }}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-bold text-[#818cf8] uppercase tracking-wider">Simulador de Crisis</h4>
-            <button onClick={() => setSimPopupPos(null)} className="text-zinc-500 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <p className="text-[11px] text-zinc-400 leading-relaxed mb-4">
-            Simula la pérdida de dispositivos para probar la seguridad:
-          </p>
-          
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-            {Array.from({ length: config.totalDevices + 1 }).map((_, n) => (
-              <button
-                key={n}
-                onClick={() => setLostDevices(n)}
-                className={cn(
-                  "w-8 h-8 rounded-none-none border text-xs font-bold transition-all duration-300",
-                  lostDevices === n
-                    ? "border-[#6366f1] bg-[#6366f1]/20 text-[#818cf8] shadow-[0_0_10px_rgba(99,102,241,0.3)]"
-                    : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-[#6366f1]/50 hover:text-zinc-300"
-                )}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-none-none bg-[#0a0c14] p-3.5 border border-zinc-800/80">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-2">Resultado de Crisis</div>
-            {remainingDevices >= config.requiredApprovals ? (
-              <div className="text-xs text-emerald-400 flex items-start gap-2 font-medium leading-relaxed">
-                <Check className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>Fondos seguros con tus {remainingDevices} firmas restantes.</span>
-              </div>
-            ) : (
-              <div className="text-xs text-[#a5b4fc] flex items-start gap-2 font-medium leading-relaxed">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-[#818cf8]" />
-                <span>
-                  Usa el seguro de emergencia tras esperar {blocksToHuman(config.timelock.blocks)}.
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   </div>
 </div>

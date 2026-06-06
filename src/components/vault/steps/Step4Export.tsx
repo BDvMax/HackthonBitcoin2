@@ -5,8 +5,9 @@ import type { VaultConfig } from "@/lib/types/vault";
 import { useWallet } from "@/context/WalletContext";
 import { generateDescriptor, descriptorWithChecksum } from "@/lib/bitcoin/descriptor";
 import { deriveWshAddresses, type DerivedAddress } from "@/lib/bitcoin/address";
+import { blocksToHuman } from "@/lib/bitcoin/timelock";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Check, Copy, Download, ChevronDown, ChevronUp, Eye, Maximize2, X, FileText, Share2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ChevronDown, Eye, Maximize2, X, FileText, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QRCode from "react-qr-code";
 import { jsPDF } from "jspdf";
@@ -21,6 +22,12 @@ export function Step4Export({ config }: Props) {
   const [copiedAddress, setCopiedAddress] = useState<number | null>(null);
   const [showAddresses, setShowAddresses] = useState(true);
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
+
+  // States for blockchain explorer
+  const [loadingAddressInfo, setLoadingAddressInfo] = useState(false);
+  const [addressInfoData, setAddressInfoData] = useState<any | null>(null);
+  const [addressInfoError, setAddressInfoError] = useState<string | null>(null);
+  const [selectedExplorerAddr, setSelectedExplorerAddr] = useState<string>("");
 
   const exportData = useMemo<{
     descriptor: string;
@@ -39,7 +46,9 @@ export function Step4Export({ config }: Props) {
         validKeys,
         config.requiredApprovals,
         config.network,
-        5
+        5,
+        0,
+        raw
       );
       return { descriptor: withChecksum, addresses: addrs, error: "" };
     } catch (error: unknown) {
@@ -52,6 +61,25 @@ export function Step4Export({ config }: Props) {
   }, [config]);
 
   const { descriptor, addresses, error } = exportData;
+
+  const checkOnChainInfo = async (addr: string) => {
+    setLoadingAddressInfo(true);
+    setAddressInfoError(null);
+    setSelectedExplorerAddr(addr);
+    try {
+      const isTestnet = config.network === "testnet";
+      const baseUrl = isTestnet ? "https://mempool.space/testnet/api" : "https://mempool.space/api";
+      const res = await fetch(`${baseUrl}/address/${addr}`);
+      if (!res.ok) throw new Error("Error al consultar el explorador público.");
+      const data = await res.json();
+      setAddressInfoData(data);
+    } catch (err: any) {
+      setAddressInfoError(err.message || "Error de red.");
+      setAddressInfoData(null);
+    } finally {
+      setLoadingAddressInfo(false);
+    }
+  };
 
   const copy = async () => {
     await navigator.clipboard.writeText(descriptor);
@@ -140,7 +168,7 @@ export function Step4Export({ config }: Props) {
     doc.text(`Red: ${config.network === "mainnet" ? "Bitcoin Mainnet" : "Bitcoin Testnet"}`, 14, 79);
     doc.text(`Seguro de Emergencia: ${config.timelock.enabled ? "Activado" : "Desactivado"}`, 14, 86);
     if (config.timelock.enabled) {
-      doc.text(`Tiempo de Bloqueo: ~ ${Math.round(config.timelock.blocks / 1008)} semanas`, 14, 93);
+      doc.text(`Tiempo de Bloqueo: ~ ${blocksToHuman(config.timelock.blocks)}`, 14, 93);
     }
 
     // 3. QR Code
@@ -305,16 +333,9 @@ export function Step4Export({ config }: Props) {
           {/* Descriptor box */}
           <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/40 p-6 flex flex-col items-center space-y-6 relative">
             <div 
-              className="bg-white p-4 rounded-none-none shadow-sm relative group cursor-pointer"
-              onClick={() => setShowFullscreenQR(true)}
+              className="bg-white p-6 rounded-none w-full shadow-sm relative flex justify-center items-center"
             >
-              <QRCode value={descriptor} size={192} className="w-48 h-48 transition-opacity group-hover:opacity-80" />
-              <button 
-                className="absolute bottom-2 right-2 bg-zinc-900/80 p-1.5 rounded-none-none text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-                onClick={(e) => { e.stopPropagation(); setShowFullscreenQR(true); }}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
+              <QRCode value={descriptor} className="w-full max-w-[400px] h-auto" />
             </div>
             
             <div className="w-full space-y-3">
@@ -350,7 +371,7 @@ export function Step4Export({ config }: Props) {
             {[
               { label: "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
               { label: "Red", value: config.network === "mainnet" ? "Bitcoin" : "Testnet" },
-              { label: "Seguro", value: config.timelock.enabled ? "Activo" : "Inactivo" },
+              { label: "Seguro", value: config.timelock.enabled ? `Activo (${blocksToHuman(config.timelock.blocks)})` : "Inactivo" },
             ].map((item) => (
               <div
                 key={item.label}
@@ -404,12 +425,21 @@ export function Step4Export({ config }: Props) {
                       <span className="text-xs font-mono text-zinc-350 truncate">
                         {a.address}
                       </span>
-                      <button
-                        onClick={() => copyAddress(a.address, a.index)}
-                        className="justify-self-start text-zinc-400 hover:text-[#818cf8] transition-colors shrink-0 text-xs sm:justify-self-end"
-                      >
-                        {copiedAddress === a.index ? "Copiada" : "Copiar"}
-                      </button>
+                      <div className="flex gap-3 justify-self-start sm:justify-self-end shrink-0 items-center">
+                        <button
+                          onClick={() => checkOnChainInfo(a.address)}
+                          className="text-[#818cf8] hover:text-white transition-colors text-xs font-semibold"
+                        >
+                          Consultar
+                        </button>
+                        <span className="text-zinc-800 text-xs">|</span>
+                        <button
+                          onClick={() => copyAddress(a.address, a.index)}
+                          className="text-zinc-450 hover:text-[#818cf8] transition-colors text-xs"
+                        >
+                          {copiedAddress === a.index ? "Copiada" : "Copiar"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -417,10 +447,81 @@ export function Step4Export({ config }: Props) {
             </div>
           )}
 
+          {/* Blockchain Info Explorer Panel */}
+          {selectedExplorerAddr && (
+            <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/20 p-5 space-y-4 animate-slideUp">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <span className="text-xs uppercase tracking-widest text-[#818cf8] font-mono font-bold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Estado en Blockchain (Mempool.space)
+                </span>
+                <div className="flex items-center gap-4">
+                  <a 
+                    href={`https://mempool.space/${config.network === "testnet" ? "testnet/" : ""}address/${selectedExplorerAddr}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#818cf8] hover:text-white text-xs font-semibold underline underline-offset-2 flex items-center gap-1"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    Historial Completo
+                  </a>
+                  <button
+                    onClick={() => setSelectedExplorerAddr("")}
+                    className="text-zinc-500 hover:text-white text-xs font-semibold"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-xs font-mono break-all text-zinc-350 bg-zinc-950 p-2.5 border border-zinc-900 leading-relaxed">
+                <span className="text-zinc-550">Dirección consultada:</span> {selectedExplorerAddr}
+              </div>
+
+              {loadingAddressInfo ? (
+                <div className="flex items-center gap-2.5 py-6 justify-center">
+                  <div className="w-4 h-4 border-2 border-[#6366f1] border-t-transparent animate-spin" />
+                  <span className="text-xs text-zinc-400 font-mono">Consultando API en tiempo real...</span>
+                </div>
+              ) : addressInfoError ? (
+                <div className="text-xs text-red-400 p-3 bg-red-950/20 border border-red-800/40">
+                  {addressInfoError}
+                </div>
+              ) : addressInfoData ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 pt-2">
+                  <div className="p-3.5 bg-[#070913]/80 border border-zinc-900 text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Balance</div>
+                    <div className="text-xs font-bold font-mono mt-1 text-white">
+                      {(addressInfoData.chain_stats.funded_txo_sum - addressInfoData.chain_stats.spent_txo_sum) / 100000000} BTC
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-[#070913]/80 border border-zinc-900 text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Recibido Total</div>
+                    <div className="text-xs font-bold font-mono mt-1 text-white">
+                      {addressInfoData.chain_stats.funded_txo_sum / 100000000} BTC
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-[#070913]/80 border border-zinc-900 text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Confirmadas</div>
+                    <div className="text-xs font-bold font-mono mt-1 text-white">
+                      {addressInfoData.chain_stats.tx_count} txs
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-[#070913]/80 border border-zinc-900 text-center">
+                    <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">En Mempool (Pendientes)</div>
+                    <div className="text-xs font-bold font-mono mt-1 text-[#818cf8]">
+                      {addressInfoData.mempool_stats.tx_count} txs
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {/* Seccion de Descargas */}
           <div className="mt-8 border-t border-zinc-800/80 pt-6">
-            <h3 className="text-xl font-bold text-white mb-2 font-mono">Descargas</h3>
-            <div className="w-full h-px bg-zinc-800 mb-6"></div>
+            <h3 className="text-xl font-bold text-white mb-2 font-mono text-center">Descargas</h3>
+            <div className="w-full border-t-2 border-dashed border-zinc-700 mb-6 mt-4"></div>
             
             <div className="flex gap-3 flex-col sm:flex-row flex-wrap">
               <Button

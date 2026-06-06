@@ -5,7 +5,7 @@ export interface XpubEntry {
   fingerprint: string;
   derivationPath: string;
   isValid: boolean;
-  deviceType?: "mobile" | "laptop" | "trezor";
+  deviceType?: "mobile" | "laptop" | "trezor" | "coldcard" | "ledger";
 }
 
 export interface TimelockConfig {

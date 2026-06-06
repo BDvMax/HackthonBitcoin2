@@ -22,7 +22,6 @@ const PERIOD_PRESETS = [
   { label: "3 meses", amount: 3, unit: "months" as const, blocks: 12960 },
   { label: "6 meses", amount: 6, unit: "months" as const, blocks: 25920 },
   { label: "1 año", amount: 12, unit: "months" as const, blocks: 52560 },
-  { label: "5 años", amount: 60, unit: "months" as const, blocks: 262800 },
 ];
 
 /** Converts amount to approximate Bitcoin blocks */
@@ -69,8 +68,25 @@ export function Step3Recovery({ config, onChange }: Props) {
   const [maxVisibleStep, setMaxVisibleStep] = useState(1);
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
-  const update = (patch: Partial<TimelockConfig>) =>
-    onChange({ timelock: { ...timelock, ...patch } });
+  const update = (patch: Partial<TimelockConfig>) => {
+    const nextType = patch.type !== undefined ? patch.type : timelock.type;
+    let nextBlocks = patch.blocks !== undefined ? patch.blocks : timelock.blocks;
+
+    if (nextType === "relative") {
+      if (nextBlocks > 65535) {
+        nextBlocks = 65535;
+      }
+      if (nextBlocks < 1) {
+        nextBlocks = 1;
+      }
+    } else {
+      if (nextBlocks < 500000) {
+        nextBlocks = 500000;
+      }
+    }
+
+    onChange({ timelock: { ...timelock, ...patch, blocks: nextBlocks } });
+  };
 
   const maxRecoveryApprovals = Math.max(1, requiredApprovals - 1);
   const sliderHasRange = maxRecoveryApprovals > 1;
@@ -225,119 +241,150 @@ export function Step3Recovery({ config, onChange }: Props) {
         <div className="space-y-6">
           {/* PASO 1 — Período */}
           <Section index={1} title={experienceLevel === "beginner" ? "¿Tras cuánto tiempo de inactividad se activa?" : "Período de Bloqueo Temporal"}>
-            <div className="flex gap-2.5 flex-wrap">
-              {PERIOD_PRESETS.map((p) => (
-                <button
-                  key={p.blocks}
-                  onClick={() => {
-                    playToggle();
-                    update({ blocks: p.blocks });
-                    setCustomPeriod(false);
-                    setSelectedPreset(p.blocks);
-                    if (maxVisibleStep === 1) {
-                      setMaxVisibleStep(2);
-                    }
-                  }}
-                  className={cn(
-                    "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
-                    selectedPreset === p.blocks && !customPeriod
-                      ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
-                      : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-              <button
-                onClick={() => {
-                  playToggle();
-                  setCustomPeriod(true);
-                  setSelectedPreset(null);
-                }}
-                className={cn(
-                  "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
-                  customPeriod
-                    ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
-                    : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
-                )}
-              >
-                Personalizado...
-              </button>
-            </div>
-
-            {customPeriod && (
-              <div className="mt-4 bg-[#0e1120] p-5 rounded-none-none border border-[#1e2640] space-y-4 animate-slideUp">
-                <div className="flex items-center gap-2 text-xs uppercase text-[#818cf8] font-mono font-bold">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Definir período personalizado
-                </div>
-
-                {/* Amount + Unit selectors */}
-                <div className="flex gap-3 items-center">
-                  <input
-                    type="number"
-                    min={1}
-                    max={10000}
-                    value={customAmount}
-                    onChange={(e) => {
-                      let val = Math.max(1, Number(e.target.value));
-                      setCustomAmount(val);
-                      update({ blocks: amountToBlocks(val, customUnit) });
-                      if (maxVisibleStep === 1) setMaxVisibleStep(2);
+            {timelock.type === "relative" ? (
+              <>
+                <div className="flex gap-2.5 flex-wrap">
+                  {PERIOD_PRESETS.map((p) => (
+                    <button
+                      key={p.blocks}
+                      onClick={() => {
+                        playToggle();
+                        update({ blocks: p.blocks });
+                        setCustomPeriod(false);
+                        setSelectedPreset(p.blocks);
+                        if (maxVisibleStep === 1) {
+                          setMaxVisibleStep(2);
+                        }
+                      }}
+                      className={cn(
+                        "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
+                        selectedPreset === p.blocks && !customPeriod
+                          ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
+                          : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      playToggle();
+                      setCustomPeriod(true);
+                      setSelectedPreset(null);
                     }}
-                    className="w-24 rounded-none-none border border-zinc-800 bg-[#121626] px-3 py-2.5 text-sm font-mono text-zinc-200 outline-none focus:border-[#6366f1]/60 text-center"
-                  />
-                  <select
-                    value={customUnit}
-                    onChange={(e) => {
-                      const newUnit = e.target.value as "months" | "years";
-                      setCustomUnit(newUnit);
-                      update({ blocks: amountToBlocks(customAmount, newUnit) });
-                    }}
-                    className="rounded-none-none border border-zinc-800 bg-[#121626] text-zinc-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#6366f1]/60 cursor-pointer"
-                  >
-                    <option value="months">Meses</option>
-                    <option value="years">Años</option>
-                  </select>
-                </div>
-
-                {/* Unlock Date Preview */}
-                <div className="flex items-start gap-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
-                  <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
-                    <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
-                      {unlockDate(customAmount, customUnit)}
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">
-                      ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedPreset !== null && !customPeriod && (
-              <div className="flex items-start gap-3 mt-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
-                <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
-                  <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
-                    {unlockDate(
-                      PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.amount ?? 6,
-                      PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.unit ?? "months"
+                    className={cn(
+                      "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
+                      customPeriod
+                        ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
+                        : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
                     )}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">
-                    ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
-                  </div>
+                  >
+                    Personalizado...
+                  </button>
                 </div>
+
+                {customPeriod && (
+                  <div className="mt-4 bg-[#0e1120] p-5 rounded-none-none border border-[#1e2640] space-y-4 animate-slideUp">
+                    <div className="flex items-center gap-2 text-xs uppercase text-[#818cf8] font-mono font-bold">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Definir período personalizado
+                    </div>
+
+                    {/* Amount + Unit selectors */}
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="number"
+                        min={1}
+                        max={customUnit === "years" ? 1 : 14}
+                        value={customAmount}
+                        onChange={(e) => {
+                          let val = Math.max(1, Number(e.target.value));
+                          if (customUnit === "years" && val > 1) val = 1;
+                          if (customUnit === "months" && val > 14) val = 14;
+                          setCustomAmount(val);
+                          update({ blocks: amountToBlocks(val, customUnit) });
+                          if (maxVisibleStep === 1) setMaxVisibleStep(2);
+                        }}
+                        className="w-24 rounded-none-none border border-zinc-800 bg-[#121626] px-3 py-2.5 text-sm font-mono text-zinc-200 outline-none focus:border-[#6366f1]/60 text-center"
+                      />
+                      <select
+                        value={customUnit}
+                        onChange={(e) => {
+                          const newUnit = e.target.value as "months" | "years";
+                          setCustomUnit(newUnit);
+                          let val = customAmount;
+                          if (newUnit === "years" && val > 1) val = 1;
+                          if (newUnit === "months" && val > 14) val = 14;
+                          setCustomAmount(val);
+                          update({ blocks: amountToBlocks(val, newUnit) });
+                        }}
+                        className="rounded-none-none border border-zinc-800 bg-[#121626] text-zinc-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#6366f1]/60 cursor-pointer"
+                      >
+                        <option value="months">Meses</option>
+                        <option value="years">Años</option>
+                      </select>
+                    </div>
+
+                    {/* Unlock Date Preview */}
+                    <div className="flex items-start gap-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
+                      <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
+                        <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
+                          {unlockDate(customAmount, customUnit)}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedPreset !== null && !customPeriod && (
+                  <div className="flex items-start gap-3 mt-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
+                    <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
+                      <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
+                        {unlockDate(
+                          PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.amount ?? 6,
+                          PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.unit ?? "months"
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-zinc-450 mt-2.5 font-mono">
+                  Equivale a <span className="font-mono text-zinc-300 font-bold">{timelock.blocks.toLocaleString()}</span> bloques ({blocksToHuman(timelock.blocks)}).
+                </p>
+              </>
+            ) : (
+              <div className="bg-[#0e1120] p-5 rounded-none-none border border-[#1e2640] space-y-4">
+                <div className="text-xs uppercase text-[#818cf8] font-mono font-bold">
+                  Definir altura de bloque absoluta
+                </div>
+                <input
+                  type="number"
+                  min={500000}
+                  max={2000000}
+                  value={timelock.blocks}
+                  onChange={(e) => {
+                    const val = Math.max(500000, Number(e.target.value));
+                    update({ blocks: val });
+                    if (maxVisibleStep === 1) setMaxVisibleStep(2);
+                  }}
+                  className="w-full rounded-none border border-zinc-850 bg-zinc-955 px-4 py-2.5 text-sm font-mono text-zinc-350 outline-none focus:border-[#6366f1]/60 transition-colors"
+                />
+                <p className="text-xs text-zinc-500">
+                  Especifica el número de bloque de la red Bitcoin tras el cual la ruta de recuperación estará activa (debe ser mayor a 500,000).
+                </p>
               </div>
             )}
-
-            <p className="text-sm text-zinc-450 mt-2.5 font-mono">
-              Equivale a <span className="font-mono text-zinc-300 font-bold">{timelock.blocks.toLocaleString()}</span> bloques ({blocksToHuman(timelock.blocks)}).
-            </p>
 
             {maxVisibleStep === 1 && (selectedPreset !== null || customPeriod) && (
               <button
