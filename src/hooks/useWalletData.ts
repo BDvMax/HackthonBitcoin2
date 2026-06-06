@@ -340,9 +340,9 @@ export function useWalletData(config: VaultConfig) {
       // 2. Derivar 30 direcciones (gap limit real)
       const validKeys = config.keys
         .filter(k => k.isValid)
-        .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath }));
+        .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath, fingerprint: k.fingerprint }));
 
-      const derived = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 30);
+      const derived = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 30, 0, descriptor);
 
       setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
 

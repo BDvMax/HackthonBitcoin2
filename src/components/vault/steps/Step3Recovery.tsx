@@ -8,9 +8,10 @@ import { parseXpub, validateDerivationPath, STANDARD_PATHS } from "@/lib/bitcoin
 import { cn } from "@/lib/utils";
 import {
   Shield, Users, UserPlus, ChevronDown,
-  AlertTriangle, Info, Check, HardDrive, AlertCircle, Sparkles, Settings, HelpCircle
+  AlertTriangle, Info, Check, HardDrive, AlertCircle, Sparkles, Settings, HelpCircle, X, Calendar
 } from "lucide-react";
 import { Term } from "@/components/ui/Term";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface Props {
   config: VaultConfig;
@@ -18,15 +19,31 @@ interface Props {
 }
 
 const PERIOD_PRESETS = [
-  { label: "3 meses", blocks: 12960  },
-  { label: "6 meses", blocks: 25920  },
-  { label: "1 año",   blocks: 52560  },
-  { label: "15 meses", blocks: 64800 },
+  { label: "3 meses", amount: 3, unit: "months" as const, blocks: 12960 },
+  { label: "6 meses", amount: 6, unit: "months" as const, blocks: 25920 },
+  { label: "1 año", amount: 12, unit: "months" as const, blocks: 52560 },
 ];
+
+/** Converts amount to approximate Bitcoin blocks */
+function amountToBlocks(amount: number, unit: "months" | "years"): number {
+  if (unit === "years") return Math.round(amount * 12 * 30.44 * 144);
+  return Math.round(amount * 30.44 * 144);
+}
+
+/** Calculates future unlock date from today */
+function unlockDate(amount: number, unit: "months" | "years"): string {
+  const d = new Date();
+  if (unit === "years") {
+    d.setFullYear(d.getFullYear() + amount);
+  } else {
+    d.setMonth(d.getMonth() + amount);
+  }
+  return d.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
 
 const EMPTY_TRUSTED_KEY = (): XpubEntry => ({
   id: crypto.randomUUID(),
-  label: "Persona de confianza",
+  label: "",
   xpub: "",
   fingerprint: "",
   derivationPath: "m/48'/0'/0'/2'",
@@ -42,17 +59,37 @@ const TEST_RECOVERY_KEY = {
 export function Step3Recovery({ config, onChange }: Props) {
   const { timelock, requiredApprovals, totalDevices } = config;
   const { experienceLevel } = useWallet();
+  const { playClick, playSuccess, playError, playToggle } = useSoundEffects();
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel === "advanced");
+  const [customPeriod, setCustomPeriod] = useState(false);
+  const [customAmount, setCustomAmount] = useState(6);
+  const [customUnit, setCustomUnit] = useState<"months" | "years">("months");
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const [maxVisibleStep, setMaxVisibleStep] = useState(1);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
-  const update = (patch: Partial<TimelockConfig>) =>
-    onChange({ timelock: { ...timelock, ...patch } });
+  const update = (patch: Partial<TimelockConfig>) => {
+    const nextType = patch.type !== undefined ? patch.type : timelock.type;
+    let nextBlocks = patch.blocks !== undefined ? patch.blocks : timelock.blocks;
+
+    if (nextType === "relative") {
+      if (nextBlocks > 65535) {
+        nextBlocks = 65535;
+      }
+      if (nextBlocks < 1) {
+        nextBlocks = 1;
+      }
+    } else {
+      if (nextBlocks < 500000) {
+        nextBlocks = 500000;
+      }
+    }
+
+    onChange({ timelock: { ...timelock, ...patch, blocks: nextBlocks } });
+  };
 
   const maxRecoveryApprovals = Math.max(1, requiredApprovals - 1);
   const sliderHasRange = maxRecoveryApprovals > 1;
-
-  const step3Complete =
-    timelock.recoveryMode === "current-keys" ||
-    (timelock.recoveryMode === "trusted-person" && !!timelock.trustedKey?.isValid);
 
   const handleTrustedXpub = (raw: string) => {
     const parsed = parseXpub(raw, config.network);
@@ -89,41 +126,87 @@ export function Step3Recovery({ config, onChange }: Props) {
   };
 
   return (
-    <div className="space-y-6 transition-all duration-300">
+    <div className="space-y-8 transition-all duration-300">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-3xl font-extrabold text-white">
           {experienceLevel === "beginner" ? "Seguro de Emergencia" : "Plan de Recuperación Criptográfica"}
         </h2>
-        <p className="text-sm text-zinc-400 mt-2">
+        <p className="text-base text-zinc-400 mt-3 leading-relaxed">
           {experienceLevel === "beginner"
             ? "Recupera tus fondos fácilmente si pierdes algún dispositivo."
             : "Define rutas alternativas sujetas a un candado de tiempo."}
         </p>
       </div>
 
+      {/* Deactivation confirmation modal */}
+      {showDeactivateConfirm && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-[#070913]/60 backdrop-blur-[2px] animate-scaleIn">
+          <div className="max-w-[260px] w-full mx-4 rounded-none-none border border-[#6366f1]/20 bg-[#0a0c14] shadow-2xl p-5 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-none-full bg-[#6366f1]/10 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-6 h-6 text-[#818cf8]" />
+            </div>
+            <div>
+              <h3 className="text-white font-extrabold text-lg tracking-tight">ADVERTENCIA</h3>
+              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                Desactivar el seguro significa que <strong className="text-[#a5b4fc]">perderás tus fondos</strong> si extravías {requiredApprovals} o más dispositivos.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2 justify-center">
+              <button
+                onClick={() => {
+                  update({ enabled: false });
+                  setShowDeactivateConfirm(false);
+                }}
+                className="w-12 h-12 rounded-none-none border border-red-500/20 bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/40 transition-all shadow-sm"
+                title="Desactivar Seguro"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => setShowDeactivateConfirm(false)}
+                className="w-12 h-12 rounded-none-none border border-[#6366f1]/40 bg-[#6366f1]/20 text-[#818cf8] flex items-center justify-center hover:bg-[#6366f1]/30 hover:border-[#6366f1]/60 transition-all shadow-sm"
+                title="Mantener Seguro"
+              >
+                <Check className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toggle principal */}
       <button
-        onClick={() => update({ enabled: !timelock.enabled })}
+        onClick={() => {
+          if (timelock.enabled) {
+            playError();
+            setShowDeactivateConfirm(true);
+          } else {
+            playSuccess();
+            update({ enabled: true });
+            setMaxVisibleStep(1);
+            setSelectedPreset(null);
+          }
+        }}
         className={cn(
-          "w-full flex items-center justify-between rounded-xl border p-4 transition-all duration-300 text-left",
+          "w-full flex items-center justify-between rounded-none-none border p-5 transition-all duration-300 text-left",
           timelock.enabled
             ? "border-[#6366f1]/40 bg-[#6366f1]/5"
-            : "border-[#1e2640] bg-[#121626]/40 hover:border-zinc-700"
+            : "border-red-500/20 bg-red-950/5 hover:border-red-500/40"
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border transition-all duration-300",
-            timelock.enabled ? "bg-[#6366f1] text-white border-transparent" : "bg-[#181d33]/50 border-[#1f2642] text-zinc-500"
+            "w-11 h-11 rounded-none-none flex items-center justify-center shrink-0 border transition-all duration-300",
+            timelock.enabled ? "bg-[#6366f1] text-white border-transparent" : "bg-red-950 border-red-900/50 text-red-400"
           )}>
-            <Shield className="w-4.5 h-4.5" />
+            <Shield className="w-5.5 h-5.5" />
           </div>
           <div>
-            <div className="text-base font-semibold text-white">
+            <div className="text-lg font-bold text-white">
               {experienceLevel === "beginner" ? "Activar seguro de emergencia" : "Habilitar Candado de Tiempo (Timelock)"}
             </div>
-            <div className="text-xs text-zinc-500 mt-0.5">
+            <div className="text-sm text-zinc-400 mt-1 leading-relaxed">
               {experienceLevel === "beginner"
                 ? "Te protege ante pérdidas de dispositivos por inactividad"
                 : "Añade condiciones de contingencia basadas en BIP68/BIP65"}
@@ -131,167 +214,349 @@ export function Step3Recovery({ config, onChange }: Props) {
           </div>
         </div>
         <div className={cn(
-          "w-10 h-6 rounded-full transition-all duration-300 relative shrink-0",
-          timelock.enabled ? "bg-[#6366f1]" : "bg-zinc-850"
+          "w-12 h-7 rounded-none-full transition-all duration-300 relative shrink-0",
+          timelock.enabled ? "bg-[#6366f1]" : "bg-zinc-700"
         )}>
           <div className={cn(
-            "w-4 h-4 rounded-full bg-white absolute top-1 transition-all duration-300",
-            timelock.enabled ? "left-5" : "left-1"
+            "w-5 h-5 rounded-none-full bg-white absolute top-1 transition-all duration-300",
+            timelock.enabled ? "left-6" : "left-1"
           )} />
         </div>
       </button>
 
+      {/* Alerta de Desactivación inline */}
+      {!timelock.enabled && (
+        <div className="rounded-none-none border border-red-500/30 bg-red-950/20 p-5 flex gap-4 items-start animate-slideUp">
+          <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="text-red-400 font-bold text-base">Seguro desactivado</h4>
+            <p className="text-sm text-zinc-300 leading-relaxed">
+              Sin seguro, perderás el acceso si pierdes {requiredApprovals} o más dispositivos de forma permanente.
+            </p>
+          </div>
+        </div>
+      )}
+
       {timelock.enabled && (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {/* PASO 1 — Período */}
           <Section index={1} title={experienceLevel === "beginner" ? "¿Tras cuánto tiempo de inactividad se activa?" : "Período de Bloqueo Temporal"}>
-            <div className="flex gap-2 flex-wrap">
-              {PERIOD_PRESETS.map((p) => (
-                <button
-                  key={p.blocks}
-                  onClick={() => update({ blocks: p.blocks })}
-                  className={cn(
-                    "px-4 py-2 rounded-lg border text-xs transition-all duration-300",
-                    timelock.blocks === p.blocks
-                      ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
-                      : "border-zinc-850 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-500 mt-2 font-mono">
-              Equivale a <span className="font-mono text-zinc-300 font-bold">{timelock.blocks.toLocaleString()}</span> bloques ({blocksToHuman(timelock.blocks)}).
-            </p>
-          </Section>
+            {timelock.type === "relative" ? (
+              <>
+                <div className="flex gap-2.5 flex-wrap">
+                  {PERIOD_PRESETS.map((p) => (
+                    <button
+                      key={p.blocks}
+                      onClick={() => {
+                        playToggle();
+                        update({ blocks: p.blocks });
+                        setCustomPeriod(false);
+                        setSelectedPreset(p.blocks);
+                        if (maxVisibleStep === 1) {
+                          setMaxVisibleStep(2);
+                        }
+                      }}
+                      className={cn(
+                        "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
+                        selectedPreset === p.blocks && !customPeriod
+                          ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
+                          : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      playToggle();
+                      setCustomPeriod(true);
+                      setSelectedPreset(null);
+                    }}
+                    className={cn(
+                      "px-5 py-2.5 rounded-none-none border text-sm transition-all duration-300 font-semibold",
+                      customPeriod
+                        ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] font-bold"
+                        : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700"
+                    )}
+                  >
+                    Personalizado...
+                  </button>
+                </div>
 
-          {/* PASO 2 — Quién */}
-          <Section index={2} title={experienceLevel === "beginner" ? "¿Quién podrá rescatar los fondos?" : "Destinatario de la Ruta de Recuperación"}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <ModeCard
-                active={timelock.recoveryMode === "current-keys"}
-                onClick={() => update({ recoveryMode: "current-keys", trustedKey: null })}
-                icon={<Users className="w-5 h-5" />}
-                title={experienceLevel === "beginner" ? "Yo mismo con menos dispositivos" : "Mis llaves con menor quórum"}
-                description={experienceLevel === "beginner" ? "Por si pierdes llaves principales." : "Gasta con menos firmas."}
-              />
-              <ModeCard
-                active={timelock.recoveryMode === "trusted-person"}
-                onClick={() => update({
-                  recoveryMode: "trusted-person",
-                  trustedKey: timelock.trustedKey ?? EMPTY_TRUSTED_KEY(),
-                })}
-                icon={<UserPlus className="w-5 h-5" />}
-                title={experienceLevel === "beginner" ? "Un contacto de confianza" : "Clave de un tercero de confianza"}
-                description={experienceLevel === "beginner" ? "Familiar, abogado, heredero." : "Asigna una clave externa."}
-              />
-            </div>
+                {customPeriod && (
+                  <div className="mt-4 bg-[#0e1120] p-5 rounded-none-none border border-[#1e2640] space-y-4 animate-slideUp">
+                    <div className="flex items-center gap-2 text-xs uppercase text-[#818cf8] font-mono font-bold">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Definir período personalizado
+                    </div>
 
-            {!timelock.recoveryMode && (
-              <p className="flex items-center gap-1.5 text-xs text-amber-400 mt-2">
-                <Info className="w-3.5 h-3.5 shrink-0" />
-                Elige un método de recuperación para continuar.
-              </p>
+                    {/* Amount + Unit selectors */}
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="number"
+                        min={1}
+                        max={customUnit === "years" ? 1 : 14}
+                        value={customAmount}
+                        onChange={(e) => {
+                          let val = Math.max(1, Number(e.target.value));
+                          if (customUnit === "years" && val > 1) val = 1;
+                          if (customUnit === "months" && val > 14) val = 14;
+                          setCustomAmount(val);
+                          update({ blocks: amountToBlocks(val, customUnit) });
+                          if (maxVisibleStep === 1) setMaxVisibleStep(2);
+                        }}
+                        className="w-24 rounded-none-none border border-zinc-800 bg-[#121626] px-3 py-2.5 text-sm font-mono text-zinc-200 outline-none focus:border-[#6366f1]/60 text-center"
+                      />
+                      <select
+                        value={customUnit}
+                        onChange={(e) => {
+                          const newUnit = e.target.value as "months" | "years";
+                          setCustomUnit(newUnit);
+                          let val = customAmount;
+                          if (newUnit === "years" && val > 1) val = 1;
+                          if (newUnit === "months" && val > 14) val = 14;
+                          setCustomAmount(val);
+                          update({ blocks: amountToBlocks(val, newUnit) });
+                        }}
+                        className="rounded-none-none border border-zinc-800 bg-[#121626] text-zinc-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#6366f1]/60 cursor-pointer"
+                      >
+                        <option value="months">Meses</option>
+                        <option value="years">Años</option>
+                      </select>
+                    </div>
+
+                    {/* Unlock Date Preview */}
+                    <div className="flex items-start gap-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
+                      <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
+                        <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
+                          {unlockDate(customAmount, customUnit)}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5">
+                          ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedPreset !== null && !customPeriod && (
+                  <div className="flex items-start gap-3 mt-3 rounded-none-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-3">
+                    <Calendar className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-0.5">Fecha estimada de desbloqueo</div>
+                      <div className="text-sm text-[#a5b4fc] font-semibold capitalize">
+                        {unlockDate(
+                          PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.amount ?? 6,
+                          PERIOD_PRESETS.find(p => p.blocks === selectedPreset)?.unit ?? "months"
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">
+                        ≈ {timelock.blocks.toLocaleString()} bloques Bitcoin
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-zinc-450 mt-2.5 font-mono">
+                  Equivale a <span className="font-mono text-zinc-300 font-bold">{timelock.blocks.toLocaleString()}</span> bloques ({blocksToHuman(timelock.blocks)}).
+                </p>
+              </>
+            ) : (
+              <div className="bg-[#0e1120] p-5 rounded-none-none border border-[#1e2640] space-y-4">
+                <div className="text-xs uppercase text-[#818cf8] font-mono font-bold">
+                  Definir altura de bloque absoluta
+                </div>
+                <input
+                  type="number"
+                  min={500000}
+                  max={2000000}
+                  value={timelock.blocks}
+                  onChange={(e) => {
+                    const val = Math.max(500000, Number(e.target.value));
+                    update({ blocks: val });
+                    if (maxVisibleStep === 1) setMaxVisibleStep(2);
+                  }}
+                  className="w-full rounded-none border border-zinc-850 bg-zinc-955 px-4 py-2.5 text-sm font-mono text-zinc-350 outline-none focus:border-[#6366f1]/60 transition-colors"
+                />
+                <p className="text-xs text-zinc-500">
+                  Especifica el número de bloque de la red Bitcoin tras el cual la ruta de recuperación estará activa (debe ser mayor a 500,000).
+                </p>
+              </div>
+            )}
+
+            {maxVisibleStep === 1 && (selectedPreset !== null || customPeriod) && (
+              <button
+                onClick={() => {
+                  playSuccess();
+                  setMaxVisibleStep(2);
+                }}
+                className="mt-4 px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold rounded-none transition-colors shadow-md"
+              >
+                Confirmar Período
+              </button>
             )}
           </Section>
 
-          {/* PASO 3 — Config específica */}
-          {timelock.recoveryMode === "current-keys" && (
-            <Section index={3} title={experienceLevel === "beginner" ? "¿Cuántos de tus dispositivos se requerirán entonces?" : "Nuevo quórum de firmas"}>
-              {sliderHasRange ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-400">Firmas necesarias:</span>
-                    <span className="font-mono text-[#818cf8] font-bold text-lg">
-                      {timelock.recoveryApprovals}
-                      <span className="text-zinc-650 text-sm font-normal"> de {totalDevices}</span>
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={maxRecoveryApprovals}
-                    step={1}
-                    value={timelock.recoveryApprovals}
-                    onChange={(e) => update({ recoveryApprovals: Number(e.target.value) })}
-                    className="w-full accent-[#6366f1]"
+          {/* PASO 2 — Quién */}
+          {maxVisibleStep >= 2 && (
+            <div className="animate-slideUp">
+              <Section index={2} title={experienceLevel === "beginner" ? "¿Quién podrá rescatar los fondos?" : "Destinatario de la Ruta de Recuperación"}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModeCard
+                    active={timelock.recoveryMode === "current-keys"}
+                    onClick={() => {
+                      playToggle();
+                      update({ recoveryMode: "current-keys", trustedKey: null });
+                      if (maxVisibleStep === 2) {
+                        setMaxVisibleStep(3);
+                      }
+                    }}
+                    icon={<Users className="w-6 h-6" />}
+                    title={experienceLevel === "beginner" ? "Yo mismo con menos dispositivos" : "Mis llaves con menor quórum"}
+                    description={experienceLevel === "beginner" ? "Por si pierdes llaves principales." : "Gasta con menos firmas."}
+                  />
+                  <ModeCard
+                    active={timelock.recoveryMode === "trusted-person"}
+                    onClick={() => {
+                      playToggle();
+                      update({
+                        recoveryMode: "trusted-person",
+                        trustedKey: timelock.trustedKey ?? EMPTY_TRUSTED_KEY(),
+                      });
+                      if (maxVisibleStep === 2) {
+                        setMaxVisibleStep(3);
+                      }
+                    }}
+                    icon={<UserPlus className="w-6 h-6" />}
+                    title={experienceLevel === "beginner" ? "Un contacto de confianza" : "Clave de un tercero de confianza"}
+                    description={experienceLevel === "beginner" ? "Familiar, abogado, heredero." : "Asigna una clave externa."}
                   />
                 </div>
-              ) : (
-                <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-[#121626]/40 p-4">
-                  <div className="w-8 h-8 rounded-lg bg-[#6366f1]/10 flex items-center justify-center shrink-0 border border-[#6366f1]/20">
-                    <span className="text-[#818cf8] font-bold font-mono">1</span>
-                  </div>
-                  <div className="text-sm text-zinc-300">
-                    Con <span className="text-white font-semibold">cualquiera de tus {totalDevices} dispositivos</span> podrás recuperar todo.
-                  </div>
-                </div>
-              )}
 
-              <div className="rounded-lg border border-zinc-855 bg-zinc-900/20 px-3 py-2 text-sm text-zinc-455 mt-3 leading-relaxed">
-                Normalmente necesitas <span className="text-white font-semibold">{requiredApprovals} firmas</span>. Tras {blocksToHuman(timelock.blocks)} de inactividad, tu bóveda se flexibilizará y te permitirá retirar con solo <span className="text-[#818cf8] font-semibold">{sliderHasRange ? timelock.recoveryApprovals : 1} firma(s)</span>.
-              </div>
-            </Section>
+                {!timelock.recoveryMode && (
+                  <p className="flex items-center gap-1.5 text-sm text-amber-400 mt-2 font-medium">
+                    <Info className="w-4 h-4 shrink-0" />
+                    Elige un método de recuperación para continuar.
+                  </p>
+                )}
+
+                {timelock.recoveryMode && maxVisibleStep === 2 && (
+                  <button
+                    onClick={() => {
+                      playSuccess();
+                      setMaxVisibleStep(3);
+                    }}
+                    className="mt-4 px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold rounded-none transition-colors shadow-md"
+                  >
+                    Confirmar Destinatario
+                  </button>
+                )}
+              </Section>
+            </div>
           )}
 
-          {timelock.recoveryMode === "trusted-person" && (
-            <Section index={3} title={experienceLevel === "beginner" ? "Registrar al contacto de confianza" : "Llave del tercero autorizado"}>
-              <TrustedKeyInput
-                entry={timelock.trustedKey}
-                network={config.network}
-                experienceLevel={experienceLevel}
-                onXpubChange={handleTrustedXpub}
-                onPathChange={handleTrustedPath}
-                onLoadTestKey={loadTestRecoveryKey}
-                onLabelChange={(label) =>
-                  update({ trustedKey: { ...timelock.trustedKey!, label } })
-                }
-              />
-              {timelock.trustedKey?.isValid && (
-                <div className="rounded-lg border border-zinc-855 bg-zinc-900/20 px-3 py-2 text-sm text-zinc-455 mt-2 leading-relaxed">
-                  Tras {blocksToHuman(timelock.blocks)} de inactividad, la persona registrada como <span className="text-[#818cf8] font-semibold">{timelock.trustedKey.label}</span> podrá reclamar los fondos de forma autónoma.
+          {/* PASO 3 */}
+          {maxVisibleStep >= 3 && timelock.recoveryMode === "current-keys" && (
+            <div className="animate-slideUp">
+              <Section index={3} title={experienceLevel === "beginner" ? "¿Cuántos de tus dispositivos se requerirán entonces?" : "Nuevo quórum de firmas"}>
+                {sliderHasRange ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-base">
+                      <span className="text-zinc-400">Firmas necesarias:</span>
+                      <span className="font-mono text-[#818cf8] font-bold text-xl">
+                        {timelock.recoveryApprovals}
+                        <span className="text-zinc-500 text-base font-normal"> de {totalDevices}</span>
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={maxRecoveryApprovals}
+                      step={1}
+                      value={timelock.recoveryApprovals}
+                      onChange={(e) => update({ recoveryApprovals: Number(e.target.value) })}
+                      className="w-full accent-[#6366f1] h-2"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 rounded-none-none border border-zinc-800 bg-[#121626]/40 p-5">
+                    <div className="w-10 h-10 rounded-none-none bg-[#6366f1]/10 flex items-center justify-center shrink-0 border border-[#6366f1]/20">
+                      <span className="text-[#818cf8] font-bold font-mono text-base">1</span>
+                    </div>
+                    <div className="text-base text-zinc-300 leading-relaxed">
+                      Con <span className="text-white font-semibold">cualquiera de tus {totalDevices} dispositivos</span> podrás recuperar todo.
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-none-none border border-zinc-850 bg-zinc-900/20 px-4 py-3 text-base text-zinc-400 mt-4 leading-relaxed">
+                  Normalmente necesitas <span className="text-white font-semibold">{requiredApprovals} firmas</span>. Tras {blocksToHuman(timelock.blocks)} de inactividad, tu bóveda se flexibilizará y te permitirá retirar con solo <span className="text-[#818cf8] font-semibold">{sliderHasRange ? timelock.recoveryApprovals : 1} firma(s)</span>.
                 </div>
-              )}
-            </Section>
+              </Section>
+            </div>
+          )}
+
+          {maxVisibleStep >= 3 && timelock.recoveryMode === "trusted-person" && (
+            <div className="animate-slideUp">
+              <Section index={3} title={experienceLevel === "beginner" ? "Registrar al contacto de confianza" : "Llave del tercero autorizado"}>
+                <TrustedKeyInput
+                  entry={timelock.trustedKey}
+                  network={config.network}
+                  experienceLevel={experienceLevel}
+                  onXpubChange={handleTrustedXpub}
+                  onPathChange={handleTrustedPath}
+                  onLoadTestKey={loadTestRecoveryKey}
+                  onLabelChange={(label) =>
+                    update({ trustedKey: { ...timelock.trustedKey!, label } })
+                  }
+                />
+                {timelock.trustedKey?.isValid && (
+                  <div className="rounded-none-none border border-zinc-850 bg-zinc-900/20 px-4 py-3 text-base text-zinc-400 mt-3 leading-relaxed">
+                    Tras {blocksToHuman(timelock.blocks)} de inactividad, la persona registrada como <span className="text-[#818cf8] font-semibold">{timelock.trustedKey.label}</span> podrá reclamar los fondos de forma autónoma.
+                  </div>
+                )}
+              </Section>
+            </div>
           )}
 
           {/* Configuración avanzada */}
-          {experienceLevel !== "beginner" && (
-            <div>
+          {maxVisibleStep >= 2 && experienceLevel !== "beginner" && (
+            <div className="space-y-3 animate-slideUp">
               <button
                 onClick={() => setShowAdvanced((v) => !v)}
-                className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="flex items-center gap-2 text-base text-zinc-400 hover:text-zinc-300 transition-colors font-semibold"
               >
                 <ChevronDown className={cn(
-                  "w-3.5 h-3.5 transition-transform duration-200",
+                  "w-4 h-4 transition-transform duration-200",
                   showAdvanced && "rotate-180"
                 )} />
                 Configuración de Parámetros de Cadena
               </button>
 
               {showAdvanced && (
-                <div className="rounded-xl border border-zinc-800 bg-[#121626]/20 p-4 space-y-4 mt-3 transition-all duration-300">
-                  <div>
-                    <label className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
+                <div className="rounded-none-none border border-zinc-800 bg-[#121626]/20 p-5 space-y-5 mt-3 transition-all duration-300">
+                  <div className="space-y-2">
+                    <label className="text-sm uppercase tracking-widest text-zinc-400 font-mono font-bold block">
                       Tipo de Bloqueo (BIP)
                     </label>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-2 gap-3 mt-2">
                       {(["relative", "absolute"] as const).map((t) => (
                         <button
                           key={t}
                           onClick={() => update({ type: t })}
                           className={cn(
-                            "rounded-lg border px-3 py-2 text-xs text-left transition-all duration-300",
+                            "rounded-none-none border px-4 py-3 text-left transition-all duration-300",
                             timelock.type === t
                               ? "border-[#6366f1] bg-[#6366f1]/5 text-[#818cf8]"
-                              : "border-zinc-850 text-zinc-550 hover:border-zinc-700"
+                              : "border-zinc-850 text-zinc-500 hover:border-zinc-700"
                           )}
                         >
-                          <div className="font-semibold">
+                          <div className="font-bold text-sm">
                             {t === "relative" ? "Relativo (Recomendado)" : "Absoluto"}
                           </div>
-                          <div className="text-[10px] text-zinc-500 mt-0.5">
+                          <div className="text-xs text-zinc-500 mt-1 leading-normal">
                             {t === "relative" ? "BIP68 · Desde la última transacción" : "BIP65 · Altura de bloque estática"}
                           </div>
                         </button>
@@ -299,17 +564,17 @@ export function Step3Recovery({ config, onChange }: Props) {
                     </div>
 
                     {timelock.type === "absolute" && (
-                      <div className="flex gap-2 mt-3 rounded-lg border border-amber-800/40 bg-amber-950/20 p-3">
-                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                      <div className="flex gap-3 mt-3 rounded-none-none border border-amber-800/40 bg-amber-955/20 p-4">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-300 leading-relaxed">
                           <span className="font-bold">Advertencia:</span> El timelock absoluto expira a un bloque específico de la cadena de bloques. Si no se retiran las monedas antes, la ruta de emergencia se activa automáticamente.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <div>
-                    <label className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
+                  <div className="space-y-2">
+                    <label className="text-sm uppercase tracking-widest text-zinc-400 font-mono font-bold block">
                       Altura / Bloques exactos
                     </label>
                     <input
@@ -318,17 +583,12 @@ export function Step3Recovery({ config, onChange }: Props) {
                       max={timelock.type === "relative" ? 65535 : 1000000}
                       value={timelock.blocks}
                       onChange={(e) => update({ blocks: Number(e.target.value) })}
-                      className="mt-2 w-full rounded-lg border border-zinc-850 bg-zinc-950 px-3 py-2 text-xs font-mono text-zinc-300 outline-none focus:border-[#6366f1]/60 transition-colors"
+                      className="mt-2 w-full rounded-none-none border border-zinc-850 bg-zinc-955 px-4 py-2.5 text-sm font-mono text-zinc-300 outline-none focus:border-[#6366f1]/60 transition-colors"
                     />
                   </div>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Simulador de Crisis */}
-          {step3Complete && (
-            <CrisisSimulator config={config} />
           )}
         </div>
       )}
@@ -336,74 +596,7 @@ export function Step3Recovery({ config, onChange }: Props) {
   );
 }
 
-/* ─── Subcomponentes ─────────────────────────────────────────────────────── */
-
-function CrisisSimulator({ config }: { config: VaultConfig }) {
-  const [lostDevices, setLostDevices] = useState<number>(0);
-  const { experienceLevel } = useWallet();
-
-  const remainingDevices = config.totalDevices - lostDevices;
-  const canSpendNow = remainingDevices >= config.requiredApprovals;
-
-  return (
-    <div className="mt-8 rounded-xl border border-zinc-800 bg-[#121626]/40 p-5 space-y-4 transition-all duration-300">
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold flex items-center gap-2 text-white">
-          <AlertTriangle className="w-4.5 h-4.5 text-[#818cf8]" />
-          {experienceLevel === "beginner" ? "Simulador de Pérdidas" : "Simulador de Crisis"}
-        </h3>
-        <span className="text-xs uppercase tracking-widest text-zinc-650 font-mono font-bold">Simulación</span>
-      </div>
-
-      <p className="text-sm text-zinc-450 leading-relaxed">
-        Prueba la resiliencia de tu diseño perdiendo dispositivos:
-      </p>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-        <div className="flex-1">
-          <label className="text-xs uppercase tracking-widest text-zinc-550 font-mono block mb-2">
-            Dispositivos perdidos
-          </label>
-          <div className="flex gap-2">
-            {[0, 1, 2, 3].filter(n => n <= config.totalDevices).map(n => (
-              <button
-                key={n}
-                onClick={() => setLostDevices(n)}
-                className={cn(
-                  "w-10 h-10 rounded-lg border text-sm font-bold transition-all duration-300",
-                  lostDevices === n
-                    ? "border-[#6366f1] bg-[#6366f1]/10 text-[#818cf8] shadow-[0_0_10px_rgba(99,102,241,0.15)]"
-                    : "border-[#1e2640] bg-zinc-900 text-zinc-550 hover:border-zinc-700 hover:text-zinc-300"
-                )}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 rounded-lg border border-zinc-850 bg-zinc-900/20 p-3 flex flex-col justify-center">
-          <div className="text-xs uppercase tracking-widest text-zinc-500 font-mono mb-1">
-            Resultado
-          </div>
-          {canSpendNow ? (
-            <div className="text-sm text-emerald-400 flex items-start gap-1.5 font-medium transition-colors">
-              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span>Tus fondos están seguros con tus {remainingDevices} firmas restantes.</span>
-            </div>
-          ) : (
-            <div className="text-sm text-orange-400 flex items-start gap-1.5 font-medium transition-colors">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-orange-400" />
-              <span>
-                Usa el seguro tras esperar {blocksToHuman(config.timelock.blocks)}.
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+/* ──────────────── Subcomponentes ─────────────────────────────────────────────────── */
 
 function Section({ index, title, children }: {
   index: number; title: string; children: React.ReactNode;
@@ -411,7 +604,7 @@ function Section({ index, title, children }: {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-[#181d33]/60 border border-[#1f2642] flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-none-full bg-[#181d33]/60 border border-[#1f2642] flex items-center justify-center shrink-0">
           <span className="text-xs font-mono text-zinc-400 font-bold">{index}</span>
         </div>
         <span className="text-base font-semibold text-zinc-200">{title}</span>
@@ -429,20 +622,20 @@ function ModeCard({ active, onClick, icon, title, description }: {
     <button
       onClick={onClick}
       className={cn(
-        "rounded-xl border p-4 text-left transition-all duration-300 space-y-2 w-full",
+        "rounded-none-none border p-4 text-left transition-all duration-300 space-y-2 w-full",
         active
           ? "border-[#6366f1] bg-[#6366f1]/5"
           : "border-[#1e2640] bg-[#121626]/40 hover:border-zinc-700"
       )}
     >
       <div className={cn(
-        "w-9 h-9 rounded-lg flex items-center justify-center border transition-all duration-300",
+        "w-9 h-9 rounded-none-none flex items-center justify-center border transition-all duration-300",
         active ? "bg-[#6366f1] text-white border-transparent" : "bg-zinc-900 border-[#1e2640] text-zinc-500"
       )}>
         {icon}
       </div>
       <div>
-        <div className={cn("text-sm font-bold transition-colors", active ? "text-white" : "text-zinc-350")}>
+        <div className={cn("text-sm font-bold transition-colors", active ? "text-white" : "text-zinc-300")}>
           {title}
         </div>
         <div className="text-xs text-zinc-500 mt-0.5">{description}</div>
@@ -469,24 +662,26 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
   const helpTitle = `Ayuda: ${entry?.label || "Contacto de Confianza"}`;
   const isHelpActive = activeHelp?.title === helpTitle;
 
-  const handleHelpClick = () => {
-    if (isHelpActive) {
-      setActiveHelp(null);
-    } else {
-      setActiveHelp({
-        title: helpTitle,
-        text: "Pide a tu contacto de confianza que abra su billetera Bitcoin (ej: BlueWallet o Sparrow), vaya a la sección de exportar su Llave Pública Extendida (XPUB / ZPUB) y te comparta el código completo para pegarlo aquí."
-      });
-    }
+  const handleHelpEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    setActiveHelp({
+      title: helpTitle,
+      text: "Pide a tu contacto de confianza que abra su billetera Bitcoin (ej: BlueWallet o Sparrow), vaya a la sección de exportar su Llave Pública Extendida (XPUB / ZPUB) y te comparta el código completo para pegarlo aquí.",
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const handleHelpLeave = () => {
+    setActiveHelp(null);
   };
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-xl border flex flex-col md:flex-row items-stretch transition-all duration-300",
+      "relative overflow-hidden rounded-none-none border flex flex-col md:flex-row items-stretch transition-all duration-300",
       entry?.isValid
-        ? "border-emerald-800/60 bg-emerald-950/20"
+        ? "border-emerald-800/60 bg-emerald-955/20"
         : hasError
-        ? "border-red-800/60 bg-red-950/10"
+        ? "border-red-800/60 bg-red-955/10"
         : "border-[#1e2640] bg-[#121626]/40"
     )}>
       <div className="flex-1 p-4 space-y-3">
@@ -494,7 +689,7 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
           <div className="flex items-center gap-2 flex-1">
             <HardDrive className="w-4.5 h-4.5 text-zinc-500 shrink-0" />
             <input
-              className="flex-1 bg-transparent text-sm font-bold text-white placeholder:text-zinc-750 outline-none"
+              className="flex-1 bg-transparent text-sm font-bold text-white placeholder:text-zinc-700 outline-none"
               value={entry?.label ?? ""}
               onChange={(e) => onLabelChange(e.target.value)}
               placeholder={experienceLevel === "beginner" ? "Ej: Mamá, Hermano, Abogado..." : "Nombre del Contacto..."}
@@ -504,7 +699,7 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
             {!hasXpub && (
               <button
                 onClick={onLoadTestKey}
-                className="text-xs text-zinc-300 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-lg border border-[#2c3558] transition-colors font-medium"
+                className="text-xs text-zinc-300 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-none-none border border-[#2c3558] transition-colors font-medium"
                 title="Cargar clave de prueba válida"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
@@ -521,8 +716,9 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
             </label>
             <button
               type="button"
-              onClick={handleHelpClick}
-              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", isHelpActive && "text-[#818cf8]")}
+              onMouseEnter={handleHelpEnter}
+              onMouseLeave={handleHelpLeave}
+              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded-none", isHelpActive && "text-[#818cf8]")}
               title="¿Cómo obtengo esta llave?"
             >
               <HelpCircle className="w-4 h-4" />
@@ -533,13 +729,13 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
             rows={2}
             spellCheck={false}
             className={cn(
-              "w-full rounded-lg border px-3 py-2 text-xs font-mono bg-zinc-950 text-zinc-300",
-              "placeholder:text-zinc-755 outline-none resize-none transition-all duration-300",
+              "w-full rounded-none-none border px-3 py-2 text-xs font-mono bg-zinc-950 text-zinc-300",
+              "placeholder:text-zinc-700 outline-none resize-none transition-all duration-300",
               hasError
-                ? "border-red-755 focus:border-red-500"
+                ? "border-red-500 focus:border-red-500"
                 : entry?.isValid
-                ? "border-emerald-855 focus:border-emerald-600"
-                : "border-zinc-855 focus:border-[#6366f1]/60"
+                ? "border-emerald-600 focus:border-emerald-600"
+                : "border-zinc-800 focus:border-[#6366f1]/60"
             )}
             value={entry?.xpub ?? ""}
             onChange={(e) => onXpubChange(e.target.value)}
@@ -570,8 +766,8 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
               <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
                 <Term name="fingerprint" />
               </label>
-              <div className="mt-1 px-2 py-1 rounded bg-zinc-950 border border-zinc-850 text-xs font-mono text-zinc-400 h-7 flex items-center">
-                {entry?.fingerprint || <span className="text-zinc-800">--------</span>}
+              <div className="mt-1 px-2 py-1 rounded-none bg-zinc-950 border border-zinc-850 text-xs font-mono text-zinc-400 h-7 flex items-center">
+                {entry?.fingerprint || <span className="text-zinc-805">--------</span>}
               </div>
             </div>
             <div className="flex-1 relative">
@@ -580,20 +776,20 @@ function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, o
               </label>
               <button
                 onClick={() => setShowPathMenu((v) => !v)}
-                className="mt-1 w-full px-2 py-1 rounded border border-zinc-855 bg-zinc-955 text-xs font-mono text-zinc-400 flex items-center justify-between h-7 hover:border-zinc-700 transition-colors"
+                className="mt-1 w-full px-2 py-1 rounded-none border border-zinc-800 bg-zinc-950 text-xs font-mono text-zinc-400 flex items-center justify-between h-7 hover:border-zinc-700 transition-colors"
               >
                 <span className="truncate">{entry?.derivationPath ?? "m/48'/0'/0'/2'"}</span>
                 <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
               </button>
               {showPathMenu && (
-                <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden transition-all duration-300">
+                <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-none-none border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden transition-all duration-300">
                   {Object.entries(STANDARD_PATHS).map(([label, path]) => (
                     <button
                       key={path}
                       onClick={() => { onPathChange(path); setShowPathMenu(false); }}
-                      className="w-full px-3 py-2 text-left hover:bg-zinc-850 transition-colors border-b border-zinc-855 last:border-0"
+                      className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
                     >
-                      <div className="text-xs font-bold text-zinc-350">{label}</div>
+                      <div className="text-xs font-bold text-zinc-300">{label}</div>
                       <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
                     </button>
                   ))}

@@ -1,10 +1,10 @@
 // lib/bitcoin/address.ts
 import * as bitcoin from "bitcoinjs-lib";
-import { BIP32Factory } from "bip32";
-import * as ecc from "tiny-secp256k1";
-import { SIGNET_NETWORK, getBitcoinNetwork } from "./xpub"; // ← Importar desde xpub
+import * as secp256k1 from "@bitcoinerlab/secp256k1";
+import { DescriptorsFactory } from "@bitcoinerlab/descriptors";
+import { getBitcoinNetwork } from "./xpub"; // ← Importar desde xpub
 
-const bip32 = BIP32Factory(ecc);
+const { Output } = DescriptorsFactory(secp256k1);
 
 export interface DerivedAddress {
   address: string;
@@ -15,50 +15,66 @@ export interface DerivedAddress {
 interface KeyForDerivation {
   xpub: string;
   derivationPath: string;
+  fingerprint?: string;
 }
 
 /**
- * Deriva direcciones P2WSH sortedmulti desde XPUBs crudos.
- * Equivale a evaluar wsh(sortedmulti(N, xpub/0/index, ...))
+ * Deriva direcciones P2WSH reales a partir del descriptor BIP380/Miniscript.
  */
 export function deriveWshAddresses(
   keys: KeyForDerivation[],
   requiredApprovals: number,
   network: "mainnet" | "testnet" | "signet" | "testnet4",
   count = 5,
-  change = 0 // 0 = recibo, 1 = cambio
+  change = 0, // 0 = recibo, 1 = cambio
+  descriptorStr?: string
 ): DerivedAddress[] {
   // 🔹 Usar la función auxiliar para obtener la red correcta
   const net = getBitcoinNetwork(network);
 
   const addresses: DerivedAddress[] = [];
 
+  // Si no se pasa un descriptorStr, construimos uno simple por compatibilidad
+  let baseDesc = descriptorStr ? descriptorStr.split("#")[0] : "";
+  if (!baseDesc && keys.length >= 2) {
+    const keyExprs = keys.map((k) => {
+      const path =
+        k.derivationPath === "m"
+          ? ""
+          : k.derivationPath.replace(/^m\//, "");
+
+      const fp = k.fingerprint || "00000000";
+      return `[${fp}${path ? `/${path}` : ""}]${k.xpub}/0/*`;
+    });
+    baseDesc = `wsh(sortedmulti(${requiredApprovals},${keyExprs.join(",")}))`;
+  }
+
+  if (!baseDesc) return [];
+
+  // Ajustar la ruta si es de cambio
+  if (change === 1) {
+    baseDesc = baseDesc.replace(/\/0\/\*/g, "/1/*");
+  }
+
   for (let index = 0; index < count; index++) {
-    // Deriva la pubkey de cada xpub en /change/index
-    const pubkeys = keys
-      .map((k) => {
-        const node = bip32.fromBase58(k.xpub.trim(), net);
-        return node.derive(change).derive(index).publicKey;
-      })
-      // sortedmulti: ordena lexicográficamente los pubkeys
-      .sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
-
-    const p2wsh = bitcoin.payments.p2wsh({
-      redeem: bitcoin.payments.p2ms({
-        m: requiredApprovals,
-        pubkeys,
+    try {
+      const output = new Output({
+        descriptor: baseDesc,
+        index,
         network: net,
-      }),
-      network: net,
-    });
+      });
 
-    if (!p2wsh.address) continue;
-
-    addresses.push({
-      address: p2wsh.address,
-      index,
-      path: `.../${change}/${index}`,
-    });
+      const address = output.getAddress();
+      if (address) {
+        addresses.push({
+          address,
+          index,
+          path: `.../${change}/${index}`,
+        });
+      }
+    } catch (err) {
+      console.error(`Error al derivar dirección en índice ${index}:`, err);
+    }
   }
 
   return addresses;
