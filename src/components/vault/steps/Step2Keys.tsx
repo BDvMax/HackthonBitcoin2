@@ -184,23 +184,37 @@ function DeviceKeyCard({
   entry, index, showPathDropdown, network, experienceLevel,
   onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onTypeChange, onClear, onLoadTestKey
 }: CardProps) {
+  const { setActiveHelp, activeHelp } = useWallet();
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
-  const [showHelp, setShowHelp] = useState(false);
   const hasXpub = entry.xpub.length > 0;
   const hasError = hasXpub && !entry.isValid;
+
+  const helpTitle = `Ayuda: ${entry.label}`;
+  const isHelpActive = activeHelp?.title === helpTitle;
+
+  const handleHelpClick = () => {
+    if (isHelpActive) {
+      setActiveHelp(null);
+    } else {
+      const text = entry.deviceType === "mobile"
+        ? "Abre tu app en el teléfono (ej: BlueWallet). Ve a Ajustes, luego selecciona Mostrar Llave Pública (XPUB) y copia el código completo para pegarlo aquí."
+        : "Abre tu software de escritorio (ej: Sparrow Wallet). Ve a Configuración de la Wallet, selecciona Wallet Info, copia la XPUB y pégala aquí.";
+      setActiveHelp({ title: helpTitle, text });
+    }
+  };
 
   return (
     <div
       className={cn(
         "relative overflow-hidden rounded-xl border flex flex-col md:flex-row items-stretch transition-all duration-300 ease-in-out",
         entry.isValid
-          ? "border-emerald-800/40 bg-emerald-950/5"
+          ? "border-emerald-805/40 bg-emerald-955/5"
           : hasError
-          ? "border-red-800/40 bg-red-950/5"
+          ? "border-red-805/40 bg-red-955/5"
           : "border-[#1e2640] bg-[#121626]/40"
       )}
     >
-      {/* Contenido Principal (Lado Izquierdo) */}
+      {/* Contenido Principal */}
       <div className="flex-1 p-4 space-y-3">
         {/* Fila superior: dispositivo selector + label */}
         <div className="flex items-center justify-between gap-3">
@@ -232,8 +246,8 @@ function DeviceKeyCard({
             {!hasXpub && (
               <button
                 onClick={onLoadTestKey}
-                className="text-xs text-zinc-300 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-lg border border-[#2c3558] transition-all duration-300 font-medium"
-                title="Cargar una llave válida ficticia de prueba"
+                className="text-xs text-zinc-350 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-lg border border-[#2c3558] transition-all duration-300 font-medium"
+                title="Cargar una llave de prueba"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
                 Prueba
@@ -255,8 +269,8 @@ function DeviceKeyCard({
             </label>
             <button
               type="button"
-              onClick={() => setShowHelp(!showHelp)}
-              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", showHelp && "text-[#818cf8]")}
+              onClick={handleHelpClick}
+              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", isHelpActive && "text-[#818cf8]")}
               title="¿Cómo obtengo esta llave?"
             >
               <HelpCircle className="w-4 h-4" />
@@ -310,7 +324,7 @@ function DeviceKeyCard({
                 <Term name="fingerprint" />
               </span>
               <div className="px-2 py-1 rounded bg-zinc-950 border border-zinc-850 text-xs font-mono text-zinc-400 h-8 flex items-center">
-                {entry.fingerprint || <span className="text-zinc-800">--------</span>}
+                {entry.fingerprint || <span className="text-zinc-805">--------</span>}
               </div>
             </div>
 
@@ -358,27 +372,6 @@ function DeviceKeyCard({
           </div>
         )}
       </div>
-
-      {/* Panel de Ayuda Desplegable Lateral (Costado Derecho) */}
-      {showHelp && (
-        <div className="w-full md:w-60 border-t md:border-t-0 md:border-l border-[#1e2640] bg-[#0d101d] p-4 flex flex-col justify-between animate-slideLeft transition-all duration-300 shrink-0">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-[#818cf8]">Instrucciones</h4>
-              <button onClick={() => setShowHelp(false)} className="text-zinc-500 hover:text-white p-0.5">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              {entry.deviceType === "mobile" ? (
-                "Abre tu app (ej: BlueWallet) → Ajustes → Mostrar Llave Pública (XPUB) y pégala aquí."
-              ) : (
-                "Abre tu software (ej: Sparrow) → Configuración → Wallet Info → copia la XPUB y pégala aquí."
-              )}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

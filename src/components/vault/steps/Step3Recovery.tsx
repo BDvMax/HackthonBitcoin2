@@ -460,11 +460,25 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
   onLabelChange: (l: string) => void;
   onLoadTestKey: () => void;
 }) {
+  const { setActiveHelp, activeHelp } = useWallet();
   const [showPathMenu, setShowPathMenu] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
-  const [showHelp, setShowHelp] = useState(false);
   const hasXpub = (entry?.xpub ?? "").length > 0;
   const hasError = hasXpub && !entry?.isValid;
+
+  const helpTitle = `Ayuda: ${entry?.label || "Contacto de Confianza"}`;
+  const isHelpActive = activeHelp?.title === helpTitle;
+
+  const handleHelpClick = () => {
+    if (isHelpActive) {
+      setActiveHelp(null);
+    } else {
+      setActiveHelp({
+        title: helpTitle,
+        text: "Pide a tu contacto de confianza que abra su billetera Bitcoin (ej: BlueWallet o Sparrow), vaya a la sección de exportar su Llave Pública Extendida (XPUB / ZPUB) y te comparta el código completo para pegarlo aquí."
+      });
+    }
+  };
 
   return (
     <div className={cn(
@@ -507,8 +521,8 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
             </label>
             <button
               type="button"
-              onClick={() => setShowHelp(!showHelp)}
-              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", showHelp && "text-[#818cf8]")}
+              onClick={handleHelpClick}
+              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded", isHelpActive && "text-[#818cf8]")}
               title="¿Cómo obtengo esta llave?"
             >
               <HelpCircle className="w-4 h-4" />
@@ -566,7 +580,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
               </label>
               <button
                 onClick={() => setShowPathMenu((v) => !v)}
-                className="mt-1 w-full px-2 py-1 rounded border border-zinc-850 bg-zinc-950 text-xs font-mono text-zinc-400 flex items-center justify-between h-7 hover:border-zinc-700 transition-colors"
+                className="mt-1 w-full px-2 py-1 rounded border border-zinc-855 bg-zinc-955 text-xs font-mono text-zinc-400 flex items-center justify-between h-7 hover:border-zinc-700 transition-colors"
               >
                 <span className="truncate">{entry?.derivationPath ?? "m/48'/0'/0'/2'"}</span>
                 <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
@@ -579,7 +593,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
                       onClick={() => { onPathChange(path); setShowPathMenu(false); }}
                       className="w-full px-3 py-2 text-left hover:bg-zinc-850 transition-colors border-b border-zinc-855 last:border-0"
                     >
-                      <div className="text-xs font-bold text-zinc-300">{label}</div>
+                      <div className="text-xs font-bold text-zinc-350">{label}</div>
                       <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
                     </button>
                   ))}
@@ -589,23 +603,6 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
           </div>
         )}
       </div>
-
-      {/* Panel de Ayuda Lateral Desplegable */}
-      {showHelp && (
-        <div className="w-full md:w-60 border-t md:border-t-0 md:border-l border-[#1e2640] bg-[#0d101d] p-4 flex flex-col justify-between animate-slideLeft transition-all duration-300 shrink-0">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-[#818cf8]">Instrucciones</h4>
-              <button onClick={() => setShowHelp(false)} className="text-zinc-500 hover:text-white p-0.5">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Tu contacto debe abrir su app (ej: BlueWallet), ir a <span className="text-white">Exportar Llave Pública (XPUB)</span> y compartirte su código para pegarlo aquí.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

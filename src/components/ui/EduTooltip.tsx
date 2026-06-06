@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
+import { useWallet } from "@/context/WalletContext";
 
 interface EduTooltipProps {
   children: React.ReactNode;
@@ -10,26 +11,33 @@ interface EduTooltipProps {
 }
 
 export function EduTooltip({ children, content, className }: EduTooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
+  const { setActiveHelp, activeHelp } = useWallet();
+
+  const handleInteract = () => {
+    setActiveHelp({
+      title: children?.toString() || "Vocabulario",
+      text: content?.toString() || "",
+    });
+  };
+
+  const isCurrentHelp = activeHelp?.title === children?.toString();
 
   return (
     <span
-      className={cn("relative inline-block", className)}
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
+      className={cn("relative inline-block cursor-help", className)}
+      onMouseEnter={handleInteract}
+      onClick={handleInteract}
     >
-      <span className="text-[#a5b4fc] bg-[#312e81]/40 border border-[#4338ca]/80 px-1.5 py-0.5 rounded-md cursor-help font-semibold transition-all duration-300 hover:bg-[#312e81]/60">
+      <span
+        className={cn(
+          "px-1.5 py-0.5 rounded-md font-semibold transition-all duration-300",
+          isCurrentHelp
+            ? "text-white bg-[#6366f1] border border-[#818cf8]"
+            : "text-[#a5b4fc] bg-[#312e81]/30 border border-[#4338ca]/60 hover:bg-[#312e81]/50 hover:text-white"
+        )}
+      >
         {children}
       </span>
-      
-      {isVisible && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl text-xs text-zinc-300 font-sans normal-case leading-relaxed pointer-events-none">
-          {content}
-          {/* Arrow */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-zinc-700"></div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-0.5 border-[3px] border-transparent border-t-zinc-900"></div>
-        </div>
-      )}
     </span>
   );
 }

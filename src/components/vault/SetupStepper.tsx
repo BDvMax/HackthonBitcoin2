@@ -8,7 +8,7 @@ import { Step2Keys } from "./steps/Step2Keys";
 import { Step3Recovery } from "./steps/Step3Recovery";
 import { Step4Export } from "./steps/Step4Export";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, Shield, HelpCircle, CheckCircle2, Circle, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, Shield, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -32,27 +32,103 @@ function SetupStepperContent() {
   // Pantalla Inicial: Splash/Welcome
   if (showWelcome) {
     return (
-      <div className="min-h-screen bg-gradient-to-tr from-[#090b14] via-[#0d1122] to-[#0c0f1c] text-white flex flex-col items-center justify-center px-4 py-8 transition-all duration-500 ease-in-out">
-        <div className="max-w-xl w-full text-center space-y-6 animate-scaleIn">
-          <div className="inline-flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#6366f1] animate-pulse" />
-            <span className="text-xs tracking-[0.4em] uppercase text-zinc-400 font-mono">
-              Bóveda Segura
-            </span>
+      <div className="min-h-screen bg-[#070913] bg-[linear-gradient(to_right,#1f293715_1px,transparent_1px),linear-gradient(to_bottom,#1f293715_1px,transparent_1px)] bg-[size:3rem_3rem] text-white flex flex-col items-center justify-center px-4 py-8 transition-all duration-500 ease-in-out relative overflow-hidden">
+        {/* Subtle decorative glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#6366f1]/5 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="max-w-md w-full flex flex-col items-center space-y-8 animate-scaleIn relative z-10">
+          {/* Top Lock Icon */}
+          <div className="w-14 h-14 rounded-2xl bg-[#6366f1]/10 border border-[#6366f1]/30 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.15)] relative">
+            <Lock className="w-6 h-6 text-[#818cf8]" />
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-            Autocustodia Bitcoin Simple
-          </h1>
-          <p className="text-base text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Diseña un plan de seguridad robusto y duradero para proteger tus ahorros de forma guiada, interactiva y paso a paso.
-          </p>
-          <div className="pt-4">
-            <Button
-              className="bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold h-14 px-8 text-base rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+
+          {/* Heading */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white font-sans">
+              Bitcoin Vault
+            </h1>
+            <p className="text-[10px] tracking-[0.4em] uppercase text-zinc-500 font-mono font-bold">
+              AUTOCUSTODIA · MULTISIG · TIMELOCK
+            </p>
+          </div>
+
+          {/* Options List */}
+          <div className="w-full space-y-3 pt-2">
+            {/* Opción 1: Nueva Bóveda */}
+            <button
               onClick={() => setShowWelcome(false)}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border border-[#1e2640] bg-[#121626]/80 backdrop-blur-md text-left transition-all duration-300 hover:border-[#6366f1]/60 hover:bg-[#181d33]/80 group shadow-lg"
             >
-              Comenzar Setup
-            </Button>
+              <div className="w-10 h-10 rounded-lg bg-[#6366f1]/10 border border-[#6366f1]/20 flex items-center justify-center text-[#818cf8] shrink-0 group-hover:bg-[#6366f1] group-hover:text-white transition-all duration-300">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-white block">
+                    Nueva Bóveda
+                  </span>
+                  <span className="text-[8px] bg-[#6366f1]/20 text-[#818cf8] border border-[#6366f1]/30 px-1.5 py-0.5 rounded font-mono uppercase font-bold">
+                    NUEVO
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-400 block mt-0.5 truncate">
+                  Configurar multisig · importar xpubs · generar ...
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-550 shrink-0 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            {/* Separator */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-zinc-800" />
+              <span className="text-[10px] font-mono text-zinc-650 uppercase">o continuar con</span>
+              <div className="h-px flex-1 bg-zinc-800" />
+            </div>
+
+            {/* Opción 2: Abrir Bóveda */}
+            <button
+              onClick={() => alert("Próximamente: Podrás cargar tu kit de recuperación desde un archivo JSON para reanudar o restaurar tu bóveda.")}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border border-[#1e2640]/50 bg-[#121626]/40 backdrop-blur-sm text-left transition-all duration-300 hover:border-zinc-700 hover:bg-[#181d33]/50 group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shrink-0 group-hover:text-zinc-300 transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-sm text-zinc-300 block group-hover:text-white transition-colors">
+                  Abrir Bóveda
+                </span>
+                <span className="text-[10px] text-zinc-500 block mt-0.5 truncate">
+                  Cargar kit de recuperación · archivo .json
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            {/* Opción 3: Importar Descriptor */}
+            <button
+              onClick={() => alert("Próximamente: Importa un descriptor BDK/Sparrow para registrar una billetera ya existente.")}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border border-[#1e2640]/50 bg-[#121626]/40 backdrop-blur-sm text-left transition-all duration-300 hover:border-zinc-700 hover:bg-[#181d33]/50 group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shrink-0 group-hover:text-zinc-300 transition-colors">
+                <UploadCloud className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-sm text-zinc-300 block group-hover:text-white transition-colors">
+                  Importar Descriptor
+                </span>
+                <span className="text-[10px] text-zinc-500 block mt-0.5 truncate">
+                  Pegar descriptor BIP380 · compatible con Sparro...
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="pt-4 text-center">
+            <span className="text-[9px] font-mono text-zinc-600 tracking-widest uppercase">
+              BITCOIN · SIGNET / TESTNET4 · MAINNET
+            </span>
           </div>
         </div>
       </div>
@@ -307,24 +383,30 @@ function SetupStepperContent() {
               </div>
 
               {/* Panel de Ayuda Contextual en el Espacio del Mapa de Progreso */}
-              {activeHelp && (
-                <div className="p-4 bg-[#0d101d] border border-[#1e2640] rounded-xl space-y-2 animate-slideUp">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-xs text-[#818cf8] uppercase tracking-wider font-mono">
-                      Ayuda: {activeHelp.title}
-                    </h4>
-                    <button
-                      onClick={() => setActiveHelp(null)}
-                      className="text-zinc-500 hover:text-white p-0.5"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+              <div className="p-4 bg-[#0d101d]/60 border border-[#1e2640] rounded-xl space-y-2 min-h-[110px] flex flex-col justify-center transition-all duration-300">
+                {activeHelp ? (
+                  <div className="animate-scaleIn space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-[10px] text-[#818cf8] uppercase tracking-wider font-mono">
+                        {activeHelp.title}
+                      </h4>
+                      <button
+                        onClick={() => setActiveHelp(null)}
+                        className="text-zinc-500 hover:text-white p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">
+                      {activeHelp.text}
+                    </p>
                   </div>
-                  <p className="text-xs text-zinc-300 leading-relaxed">
-                    {activeHelp.text}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-[11px] text-zinc-500 text-center py-1 leading-relaxed">
+                    Presiona los términos en <span className="text-[#a5b4fc] bg-[#312e81]/30 px-1 rounded font-semibold">violeta</span> o el icono <HelpCircle className="inline-block w-3.5 h-3.5 mx-0.5 text-zinc-400" /> para ver ayuda interactiva en este espacio.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
