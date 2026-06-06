@@ -65,33 +65,59 @@ export function Step2Keys({ config, onChange }: Props) {
     [entries, onChange]
   );
 
+  const validateKeyEntry = useCallback((xpub: string, fingerprint: string, path: string) => {
+    const parsed = parseXpub(xpub, network);
+    const hasValidXpub = parsed.isValid;
+    const hasValidPath = validateDerivationPath(path);
+    const hasValidFp = /^[0-9A-Fa-f]{8}$/.test(fingerprint.trim());
+    return hasValidXpub && hasValidPath && hasValidFp;
+  }, [network]);
+
   const handleXpubChange = (id: string, raw: string) => {
+    const entry = entries.find((e) => e.id === id);
+    if (!entry) return;
     const parsed = parseXpub(raw, network);
+    const fp = parsed.fingerprint || entry.fingerprint || "";
+    const path = entry.derivationPath || "";
     updateEntry(id, {
       xpub: raw,
-      fingerprint: parsed.fingerprint,
-      isValid: parsed.isValid && validateDerivationPath(
-        entries.find((e) => e.id === id)?.derivationPath ?? ""
-      ),
+      fingerprint: fp,
+      isValid: validateKeyEntry(raw, fp, path),
+    });
+  };
+
+  const handleFingerprintChange = (id: string, fp: string) => {
+    const entry = entries.find((e) => e.id === id);
+    if (!entry) return;
+    const xpub = entry.xpub;
+    const path = entry.derivationPath;
+    updateEntry(id, {
+      fingerprint: fp,
+      isValid: validateKeyEntry(xpub, fp, path),
     });
   };
 
   const handlePathChange = (id: string, path: string) => {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
-    const valid = parseXpub(entry.xpub, network).isValid && validateDerivationPath(path);
-    updateEntry(id, { derivationPath: path, isValid: valid });
-    setShowPathDropdown(null);
+    const xpub = entry.xpub;
+    const fp = entry.fingerprint;
+    updateEntry(id, {
+      derivationPath: path,
+      isValid: validateKeyEntry(xpub, fp, path),
+    });
   };
 
   const loadTestKey = (id: string, index: number) => {
     const testKey = TEST_KEYS[index % TEST_KEYS.length];
     const parsed = parseXpub(testKey.xpub, network);
+    const fp = testKey.fingerprint;
+    const path = testKey.derivationPath;
     updateEntry(id, {
       xpub: testKey.xpub,
-      fingerprint: parsed.fingerprint || testKey.fingerprint,
-      derivationPath: testKey.derivationPath,
-      isValid: parsed.isValid
+      fingerprint: fp,
+      derivationPath: path,
+      isValid: parsed.isValid && /^[0-9A-Fa-f]{8}$/.test(fp) && validateDerivationPath(path)
     });
   };
 
@@ -145,6 +171,7 @@ export function Step2Keys({ config, onChange }: Props) {
             }
             onXpubChange={(v) => handleXpubChange(entry.id, v)}
             onPathChange={(p) => handlePathChange(entry.id, p)}
+            onFingerprintChange={(f) => handleFingerprintChange(entry.id, f)}
             onLabelChange={(l) => updateEntry(entry.id, { label: l })}
             onTypeChange={(t) => updateEntry(entry.id, { deviceType: t, label: t === "mobile" ? "Billetera Celular" : "Billetera Laptop" })}
             onClear={() =>
@@ -167,12 +194,13 @@ export function Step2Keys({ config, onChange }: Props) {
 interface CardProps {
   entry: XpubEntry;
   index: number;
-  network: "mainnet" | "testnet";
+  network: "mainnet" | "testnet" | "signet" | "testnet4";
   experienceLevel: "beginner" | "intermediate" | "advanced";
   showPathDropdown: boolean;
   onToggleDropdown: () => void;
   onXpubChange: (v: string) => void;
   onPathChange: (p: string) => void;
+  onFingerprintChange: (f: string) => void;
   onLabelChange: (l: string) => void;
   onTypeChange: (t: "mobile" | "laptop") => void;
   onClear: () => void;
@@ -181,7 +209,7 @@ interface CardProps {
 
 function DeviceKeyCard({
   entry, showPathDropdown, network, experienceLevel,
-  onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onTypeChange, onClear, onLoadTestKey
+  onToggleDropdown, onXpubChange, onPathChange, onFingerprintChange, onLabelChange, onTypeChange, onClear, onLoadTestKey
 }: CardProps) {
   const { setActiveHelp, activeHelp } = useWallet();
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
@@ -294,6 +322,8 @@ function DeviceKeyCard({
           />
         </div>
 
+        
+
         {/* Mensaje de error */}
         {hasError && (
           <p className="flex items-center gap-1.5 text-xs text-red-400">
@@ -322,9 +352,22 @@ function DeviceKeyCard({
               <span className="text-xs uppercase tracking-wider text-zinc-500 font-mono block mb-1">
                 <Term name="fingerprint" />
               </span>
-              <div className="px-2 py-1 rounded bg-zinc-950 border border-zinc-850 text-xs font-mono text-zinc-400 h-8 flex items-center">
-                {entry.fingerprint || <span className="text-zinc-805">--------</span>}
-              </div>
+              <input
+                type="text"
+                maxLength={8}
+                value={entry.fingerprint}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, "");
+                  onFingerprintChange(val);
+                }}
+                placeholder="E.g. 1961D712"
+                className={cn(
+                  "w-full px-2 py-1 rounded bg-zinc-950 border text-xs font-mono text-zinc-300 h-8 focus:outline-none transition-all duration-300",
+                  /^[0-9A-Fa-f]{8}$/.test(entry.fingerprint)
+                    ? "border-zinc-850 focus:border-[#6366f1]/60"
+                    : "border-red-900/50 focus:border-red-650"
+                )}
+              />
             </div>
 
             {/* Derivation Path */}
@@ -332,26 +375,41 @@ function DeviceKeyCard({
               <span className="text-xs uppercase tracking-wider text-zinc-500 font-mono block mb-1">
                 <Term name="derivation" />
               </span>
-              <button
-                onClick={onToggleDropdown}
-                className={cn(
-                  "w-full px-2 py-1 rounded border text-xs font-mono text-left",
-                  "flex items-center justify-between h-8 transition-all duration-300 bg-zinc-950",
-                  showPathDropdown
-                    ? "border-[#6366f1]/60 text-[#818cf8]"
-                    : "border-zinc-850 text-zinc-400 hover:border-zinc-700"
-                )}
-              >
-                <span className="truncate">{entry.derivationPath}</span>
-                <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
-              </button>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={entry.derivationPath}
+                  onChange={(e) => onPathChange(e.target.value)}
+                  placeholder="m/48'/1'/0'/2'"
+                  className={cn(
+                    "w-full pl-2 pr-8 py-1 rounded bg-zinc-950 border text-xs font-mono text-zinc-300 h-8 focus:outline-none transition-all duration-300",
+                    validateDerivationPath(entry.derivationPath)
+                      ? "border-zinc-850 focus:border-[#6366f1]/60"
+                      : "border-red-900/50 focus:border-red-650"
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={onToggleDropdown}
+                  className="absolute right-0 top-0 h-8 w-8 flex items-center justify-center text-zinc-500 hover:text-zinc-350 transition-colors"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
 
               {showPathDropdown && (
                 <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden transition-all duration-300">
-                  {Object.entries(network === "testnet" ? TESTNET_PATHS : STANDARD_PATHS).map(([label, path]) => (
+                  {Object.entries(
+                    (network === "testnet" || network === "testnet4" || network === "signet")
+                      ? TESTNET_PATHS
+                      : STANDARD_PATHS
+                  ).map(([label, path]) => (
                     <button
                       key={path}
-                      onClick={() => onPathChange(path)}
+                      onClick={() => {
+                        onPathChange(path);
+                        onToggleDropdown();
+                      }}
                       className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-850 last:border-0"
                     >
                       <div className="text-xs font-bold text-zinc-300">{label}</div>

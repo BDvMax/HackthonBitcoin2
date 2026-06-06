@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud, Check, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SetupStep, TimelockConfig, VaultConfig, XpubEntry } from "@/lib/types/vault";
-
+import { WalletView } from "./WalletView";
 const STEPS = [
   { id: 1, label: "Dispositivos" },
   { id: 2, label: "Llaves" },
@@ -35,6 +35,7 @@ const DEFAULT_TIMELOCK: TimelockConfig = {
 function SetupStepperContent() {
   const { step, setStep, config, updateConfig, canAdvance, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp } = useWallet();
   const [showWelcome, setShowWelcome] = useState(true);
+  const [showWallet, setShowWallet] = useState(false);
   const [importPanel, setImportPanel] = useState<"descriptor" | null>(null);
   const [descriptorDraft, setDescriptorDraft] = useState("");
   const [importMessage, setImportMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -182,6 +183,15 @@ function SetupStepperContent() {
   const goNext = () => {
     setStep((current) => (current < 4 ? ((current + 1) as SetupStep) : current));
   };
+
+  if (showWallet) {
+  return (
+    <WalletView
+      config={config}
+      onBack={() => setShowWallet(false)}
+    />
+  );
+}
 
   // Pantalla Inicial: Splash/Welcome
   if (showWelcome) {
@@ -468,7 +478,13 @@ function SetupStepperContent() {
                 >
                   Continuar <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-              ) : null}
+              ) : ( <Button
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold sm:w-auto"
+                      onClick={() => setShowWallet(true)}
+                    >
+                      Ver Bóveda <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
             </div>
           </div>
         </div>

@@ -1,6 +1,8 @@
+// lib/bitcoin/address.ts
 import * as bitcoin from "bitcoinjs-lib";
 import { BIP32Factory } from "bip32";
 import * as ecc from "tiny-secp256k1";
+import { SIGNET_NETWORK, getBitcoinNetwork } from "./xpub"; // ← Importar desde xpub
 
 const bip32 = BIP32Factory(ecc);
 
@@ -22,12 +24,12 @@ interface KeyForDerivation {
 export function deriveWshAddresses(
   keys: KeyForDerivation[],
   requiredApprovals: number,
-  network: "mainnet" | "testnet",
+  network: "mainnet" | "testnet" | "signet" | "testnet4",
   count = 5,
   change = 0 // 0 = recibo, 1 = cambio
 ): DerivedAddress[] {
-  const net =
-    network === "testnet" ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
+  // 🔹 Usar la función auxiliar para obtener la red correcta
+  const net = getBitcoinNetwork(network);
 
   const addresses: DerivedAddress[] = [];
 
@@ -40,7 +42,6 @@ export function deriveWshAddresses(
       })
       // sortedmulti: ordena lexicográficamente los pubkeys
       .sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
-
 
     const p2wsh = bitcoin.payments.p2wsh({
       redeem: bitcoin.payments.p2ms({

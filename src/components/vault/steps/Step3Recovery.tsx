@@ -453,7 +453,7 @@ function ModeCard({ active, onClick, icon, title, description }: {
 
 function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, onLabelChange, onLoadTestKey }: {
   entry: XpubEntry | null;
-  network: "mainnet" | "testnet";
+  network: "mainnet" | "testnet" | "signet" | "testnet4";
   experienceLevel: "beginner" | "intermediate" | "advanced";
   onXpubChange: (v: string) => void;
   onPathChange: (p: string) => void;

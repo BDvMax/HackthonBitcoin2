@@ -23,7 +23,7 @@ export interface VaultConfig {
   requiredApprovals: number;
   keys: XpubEntry[];
   timelock: TimelockConfig;
-  network: "mainnet" | "testnet";
+  network: "mainnet" | "testnet" | "signet" | "testnet4";
 }
 
 export type SetupStep = 0 | 1 | 2 | 3 | 4;

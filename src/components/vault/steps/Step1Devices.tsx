@@ -14,21 +14,56 @@ interface Props {
 const DEVICE_OPTIONS = [2, 3, 4, 5];
 
 export function Step1Devices({ config, onChange }: Props) {
-  const { totalDevices, requiredApprovals } = config;
+  const { totalDevices, requiredApprovals, network } = config;
   const { experienceLevel } = useWallet();
+
+  const NETWORK_OPTIONS = [
+    { id: "mainnet", name: "Mainnet", desc: "Red Principal (Fondos Reales)" },
+    { id: "testnet4", name: "Testnet 4", desc: "Nueva Red de Prueba (BIP94)" },
+    { id: "signet", name: "Signet", desc: "Red de Firmas (Estable/Rápida)" },
+    { id: "testnet", name: "Testnet 3", desc: "Red de Prueba Heredada" },
+  ] as const;
 
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-white">
-          {experienceLevel === "beginner" ? "Elige las reglas de tu caja fuerte" : "¿Cuántos dispositivos vincularás?"}
+          {experienceLevel === "beginner" ? "Elige las reglas de tu caja fuerte" : "¿Cómo estructurarás tu bóveda?"}
         </h2>
         <p className="text-sm text-zinc-400 mt-2">
           {experienceLevel === "beginner"
-            ? "Elige el número de llaves totales y cuántas necesitas para retirar tus monedas."
-            : "Define la estructura multifirma del quórum principal (M de N)."}
+            ? "Elige el número de llaves totales, cuántas necesitas para retirar tus monedas y la red de Bitcoin."
+            : "Define la red de Bitcoin y la estructura de tu quórum multifirma (M de N)."}
         </p>
+      </div>
+
+      {/* Selector de Red */}
+      <div className="space-y-3">
+        <label className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
+          Red de Bitcoin
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {NETWORK_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => onChange({ network: opt.id })}
+              className={cn(
+                "p-3 rounded-xl border text-left transition-all duration-300 flex flex-col justify-between h-20",
+                network === opt.id
+                  ? "border-[#6366f1] bg-[#6366f1]/5 text-[#818cf8] shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                  : "border-zinc-850 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900/60"
+              )}
+            >
+              <span className={cn("text-sm font-bold", network === opt.id ? "text-[#818cf8]" : "text-white")}>
+                {opt.name}
+              </span>
+              <span className="text-[10px] text-zinc-400 mt-1 block leading-normal">
+                {opt.desc}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Selector total de dispositivos */}
