@@ -5,6 +5,7 @@ export interface XpubEntry {
   fingerprint: string;
   derivationPath: string;
   isValid: boolean;
+  deviceType?: "mobile" | "laptop";
 }
 
 export interface TimelockConfig {
@@ -25,4 +26,4 @@ export interface VaultConfig {
   network: "mainnet" | "testnet";
 }
 
-export type SetupStep = 1 | 2 | 3 | 4;
+export type SetupStep = 0 | 1 | 2 | 3 | 4;
