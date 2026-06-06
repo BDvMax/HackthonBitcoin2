@@ -79,10 +79,10 @@ export function Step4Export({ config }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Kit de Recuperación</h2>
-        <p className="text-sm text-zinc-500 mt-1">
+        <h2 className="text-lg sm:text-xl font-semibold">Kit de Recuperación</h2>
+        <p className="text-xs sm:text-sm text-zinc-500 mt-1">
           Guarda este archivo en al menos 2 ubicaciones seguras. Sin él no podrás recuperar tu bóveda.
         </p>
       </div>

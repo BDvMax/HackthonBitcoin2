@@ -24,10 +24,10 @@ export function Step3Recovery({ config, onChange }: Props) {
     onChange({ timelock: { ...timelock, ...patch } });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Plan de Recuperación por Inactividad</h2>
-        <p className="text-sm text-zinc-500 mt-1">
+        <h2 className="text-lg sm:text-xl font-semibold">Plan de Recuperación por Inactividad</h2>
+        <p className="text-xs sm:text-sm text-zinc-500 mt-1">
           Opcional. Permite recuperar fondos con menos llaves si no hay actividad durante un período.
         </p>
       </div>

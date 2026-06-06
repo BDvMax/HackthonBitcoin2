@@ -68,30 +68,30 @@ export function Step2Keys({ config, onChange }: Props) {
   const validCount = entries.filter((e) => e.isValid).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold">Vincula tus dispositivos</h2>
-        <p className="text-sm text-zinc-500 mt-1">
+        <h2 className="text-lg sm:text-xl font-semibold">Vincula tus dispositivos</h2>
+        <p className="text-xs sm:text-sm text-zinc-500 mt-1">
           Importa la llave pública extendida (XPUB/ZPUB) de cada dispositivo.
         </p>
       </div>
 
       {/* Progreso */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex-1 h-1 sm:h-1.5 rounded-full bg-zinc-800 overflow-hidden">
           <div
             className="h-full bg-orange-500 rounded-full transition-all duration-500"
             style={{ width: `${(validCount / totalDevices) * 100}%` }}
           />
         </div>
-        <span className="text-xs font-mono text-zinc-400">
-          {validCount}/{totalDevices} verificados
+        <span className="text-[10px] sm:text-xs font-mono text-zinc-400 shrink-0">
+          {validCount}/{totalDevices}
         </span>
       </div>
 
       {/* Tarjetas de dispositivo */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {entries.map((entry, i) => (
           <DeviceKeyCard
             key={entry.id}
@@ -154,28 +154,28 @@ function DeviceKeyCard({
       )}
     >
       {/* Fila superior: índice + label + estado */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <div
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+            "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 text-sm sm:text-base",
             entry.isValid ? "bg-emerald-500/20" : "bg-zinc-800"
           )}
         >
           {entry.isValid ? (
-            <Check className="w-4 h-4 text-emerald-400" />
+            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
           ) : (
-            <HardDrive className="w-4 h-4 text-zinc-500" />
+            <HardDrive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
           )}
         </div>
         <input
-          className="flex-1 bg-transparent text-sm font-medium text-white placeholder:text-zinc-600 outline-none"
+          className="flex-1 bg-transparent text-xs sm:text-sm font-medium text-white placeholder:text-zinc-600 outline-none"
           value={entry.label}
           onChange={(e) => onLabelChange(e.target.value)}
           placeholder={`Dispositivo ${index + 1}`}
         />
         {hasXpub && (
-          <button onClick={onClear} className="text-zinc-600 hover:text-red-400 transition-colors">
-            <Trash2 className="w-4 h-4" />
+          <button onClick={onClear} className="text-zinc-600 hover:text-red-400 transition-colors shrink-0">
+            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         )}
       </div>

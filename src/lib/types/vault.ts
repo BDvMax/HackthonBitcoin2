@@ -22,3 +22,4 @@ export interface VaultConfig {
 }
 
 export type SetupStep = 1 | 2 | 3 | 4;
+export type VaultScreen = "home" | "setup" | "success";
