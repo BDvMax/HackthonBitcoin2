@@ -5,7 +5,7 @@ export interface XpubEntry {
   fingerprint: string;
   derivationPath: string;
   isValid: boolean;
-  deviceType?: "mobile" | "laptop";
+  deviceType?: "mobile" | "laptop" | "trezor";
 }
 
 export interface TimelockConfig {
@@ -13,7 +13,7 @@ export interface TimelockConfig {
   type: "relative" | "absolute";
   blocks: number;
   // Nueva lógica de recuperación
-  recoveryMode: "current-keys" | "trusted-person";
+  recoveryMode?: "current-keys" | "trusted-person" | null;
   recoveryApprovals: number;      // para current-keys: cuántas firmas en ruta recovery
   trustedKey: XpubEntry | null;   // para trusted-person
 }

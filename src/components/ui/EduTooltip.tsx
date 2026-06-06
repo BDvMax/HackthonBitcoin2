@@ -13,10 +13,12 @@ interface EduTooltipProps {
 export function EduTooltip({ children, content, className }: EduTooltipProps) {
   const { setActiveHelp, activeHelp } = useWallet();
 
-  const handleInteract = () => {
+  const handleInteract = (e: React.MouseEvent<HTMLSpanElement>) => {
     setActiveHelp({
       title: children?.toString() || "Vocabulario",
       text: content?.toString() || "",
+      x: e.clientX,
+      y: e.clientY,
     });
   };
 
@@ -26,14 +28,15 @@ export function EduTooltip({ children, content, className }: EduTooltipProps) {
     <span
       className={cn("relative inline-block cursor-help", className)}
       onMouseEnter={handleInteract}
+      onMouseLeave={() => setActiveHelp(null)}
       onClick={handleInteract}
     >
       <span
         className={cn(
-          "px-1.5 py-0.5 rounded-md font-semibold transition-all duration-300",
+          "underline decoration-dotted decoration-[#818cf8]/80 decoration-2 underline-offset-4 font-bold transition-all duration-300",
           isCurrentHelp
-            ? "text-white bg-[#6366f1] border border-[#818cf8]"
-            : "text-[#a5b4fc] bg-[#312e81]/30 border border-[#4338ca]/60 hover:bg-[#312e81]/50 hover:text-white"
+            ? "text-[#a5b4fc] bg-[#6366f1]/10 px-1 rounded-sm decoration-solid"
+            : "text-[#818cf8] hover:text-[#a5b4fc] hover:bg-[#312e81]/10 px-1 rounded-sm"
         )}
       >
         {children}

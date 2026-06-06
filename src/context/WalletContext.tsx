@@ -8,10 +8,10 @@ const DEFAULT_CONFIG: VaultConfig = {
   requiredApprovals: 2,
   keys: [],
   timelock: {
-    enabled: false,
+    enabled: true,
     type: "relative",
     blocks: 25920,
-    recoveryMode: "current-keys",
+    recoveryMode: null,
     recoveryApprovals: 1,
     trustedKey: null,
   },
@@ -23,6 +23,8 @@ export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
 export interface HelpContent {
   title: string;
   text: string;
+  x?: number;
+  y?: number;
 }
 
 interface WalletState {
