@@ -28,7 +28,11 @@ function shortDate(ts: number): string {
 }
 function explorerUrl(network: string, txid: string): string {
   if (network === "mainnet") return `https://blockstream.info/tx/${txid}`;
-  if (network === "signet")  return `https://mutinynet.com/tx/${txid}`;
+  if (network === "signet")
+    // Opción B — Signet oficial
+    return `https://mempool.space/signet/tx/${txid}`;
+    // Opción A — Mutinynet
+    // return `https://mutinynet.com/tx/${txid}`;
   return `https://mempool.space/testnet4/tx/${txid}`;
 }
 

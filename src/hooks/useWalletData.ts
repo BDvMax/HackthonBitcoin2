@@ -114,11 +114,21 @@ export interface WalletState {
 
 function esploraBase(network: string): string {
   switch (network) {
-    case "mainnet":  return "https://blockstream.info/api";
-    case "signet":   return "https://mutinynet.com/api";
-    case "testnet4": return "https://mempool.space/testnet4/api";
+    case "mainnet":
+      return "https://blockstream.info/api";
+
+    case "signet":
+      // Opción B — Signet oficial (mempool.space)
+      return "https://mempool.space/signet/api";
+      // Opción A — Mutinynet (red signet personalizada de Mutiny)
+      // return "https://mutinynet.com/api";
+
+    case "testnet4":
+      return "https://mempool.space/testnet4/api";
+
     case "testnet":
-    default:         return "https://blockstream.info/testnet/api";
+    default:
+      return "https://blockstream.info/testnet/api";
   }
 }
 
@@ -143,7 +153,7 @@ async function fetchJson<T>(url: string, retries = 2): Promise<T> {
 
 // ── Lógica de scan por gap limit ─────────────────────────────────────────────
 
-const GAP_LIMIT = 20;
+const GAP_LIMIT = 25;
 
 async function scanAddresses(
   base: string,
@@ -331,20 +341,22 @@ export function useWalletData(config: VaultConfig) {
     const base = esploraBase(config.network);
 
     try {
-      // 1. Descriptor
-      const raw = generateDescriptor(config);
-      const descriptor = descriptorWithChecksum(raw);
+        const raw = generateDescriptor(config);
+        const descriptor = descriptorWithChecksum(raw);
 
-      setState(s => ({ ...s, progress: 10, progressLabel: "Derivando direcciones..." }));
+        setState(s => ({ ...s, progress: 10, progressLabel: "Derivando direcciones..." }));
 
-      // 2. Derivar 30 direcciones (gap limit real)
-      const validKeys = config.keys
+        // 2. Derivar direcciones (RECIBO + CAMBIO)
+        const validKeys = config.keys
         .filter(k => k.isValid)
         .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath, fingerprint: k.fingerprint }));
 
-      const derived = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 30, 0, descriptor);
+        // CORRECCIÓN AQUÍ 
+        const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0, descriptor);
+        const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1, descriptor);
+        const derived = [...receiveAddresses, ...changeAddresses];
 
-      setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
+        setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
 
       // 3. Obtener tip height
       let tipHeight = 0;

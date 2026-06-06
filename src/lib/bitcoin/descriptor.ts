@@ -19,13 +19,13 @@ export function generateDescriptor(config: VaultConfig): string {
     const path =
       k.derivationPath === "m"
         ? ""
-        : k.derivationPath.replace(/^m\//, "");
+        : k.derivationPath.replace(/^m\//, "").replace(/'/g, "h");
+//                                          ↑ convierte ' → h
 
     return `[${k.fingerprint}${path ? `/${path}` : ""}]${k.xpub}/0/*`;
   });
 
-  const multisig = `multi(${requiredApprovals},${keyExprs.join(",")})`;
-
+  const multisig = `sortedmulti(${requiredApprovals},${keyExprs.join(",")})`;
   let inner = multisig;
 
   if (config.timelock.enabled) {

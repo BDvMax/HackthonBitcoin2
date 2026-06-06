@@ -87,7 +87,7 @@ export function parseXpub(
 
 // Valida formato de path: m/48'/0'/0'/2' o m/45'
 export function validateDerivationPath(path: string): boolean {
-  return /^m(\/\d+'?)*$/.test(path.trim());
+  return /^m(\/\d+[h']?)*$/.test(path.trim());
 }
 
 // Shortform para UI: "xpub6ABC...XYZ"
