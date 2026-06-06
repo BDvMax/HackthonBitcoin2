@@ -8,7 +8,7 @@ import { parseXpub, validateDerivationPath, STANDARD_PATHS } from "@/lib/bitcoin
 import { cn } from "@/lib/utils";
 import {
   Shield, Users, UserPlus, ChevronDown,
-  AlertTriangle, Info, Check, HardDrive, AlertCircle, Sparkles, Settings, HelpCircle, X
+  AlertTriangle, Info, Check, HardDrive, AlertCircle, Sparkles, Settings, HelpCircle
 } from "lucide-react";
 import { Term } from "@/components/ui/Term";
 
@@ -451,7 +451,7 @@ function ModeCard({ active, onClick, icon, title, description }: {
   );
 }
 
-function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPathChange, onLabelChange, onLoadTestKey }: {
+function TrustedKeyInput({ entry, experienceLevel, onXpubChange, onPathChange, onLabelChange, onLoadTestKey }: {
   entry: XpubEntry | null;
   network: "mainnet" | "testnet";
   experienceLevel: "beginner" | "intermediate" | "advanced";
@@ -565,7 +565,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
         ) : null}
 
         {showAdvanced && (
-          <div className="flex gap-3 pt-2 border-t border-zinc-900 transition-all duration-300">
+          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900 transition-all duration-300 sm:grid-cols-2">
             <div className="flex-1">
               <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
                 <Term name="fingerprint" />

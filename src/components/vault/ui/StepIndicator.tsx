@@ -6,7 +6,7 @@ interface Props { steps: readonly Step[]; currentStep: number; }
 
 export function StepIndicator({ steps, currentStep }: Props) {
   return (
-    <div className="flex items-center gap-0">
+    <div className="mx-auto flex min-w-max items-center justify-center gap-0">
       {steps.map((s, i) => {
         const done = s.id < currentStep;
         const active = s.id === currentStep;
@@ -35,7 +35,7 @@ export function StepIndicator({ steps, currentStep }: Props) {
             {i < steps.length - 1 && (
               <div
                 className={cn(
-                  "w-16 h-px mb-4 mx-1 transition-all",
+                  "w-8 h-px mb-4 mx-1 transition-all sm:w-16",
                   done ? "bg-[#6366f1]" : "bg-zinc-800"
                 )}
               />

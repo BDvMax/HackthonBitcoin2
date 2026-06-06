@@ -46,14 +46,14 @@ export function parseXpub(
       depth: node.depth,
       isValid: true,
     };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return {
       xpub: raw.trim(),
       fingerprint: "",
       derivationPath: "",
       depth: 0,
       isValid: false,
-      error: e?.message ?? "XPUB inválido",
+      error: e instanceof Error ? e.message : "XPUB inválido",
     };
   }
 }

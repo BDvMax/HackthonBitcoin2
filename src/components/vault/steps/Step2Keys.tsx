@@ -11,8 +11,7 @@ import {
   TESTNET_PATHS,
 } from "@/lib/bitcoin/xpub";
 import { cn } from "@/lib/utils";
-import { AlertCircle, ChevronDown, Trash2, Smartphone, Laptop, Settings, Sparkles, HelpCircle, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, ChevronDown, Trash2, Smartphone, Laptop, Settings, Sparkles, HelpCircle } from "lucide-react";
 import { Term } from "@/components/ui/Term";
 
 interface Props {
@@ -181,7 +180,7 @@ interface CardProps {
 }
 
 function DeviceKeyCard({
-  entry, index, showPathDropdown, network, experienceLevel,
+  entry, showPathDropdown, network, experienceLevel,
   onToggleDropdown, onXpubChange, onPathChange, onLabelChange, onTypeChange, onClear, onLoadTestKey
 }: CardProps) {
   const { setActiveHelp, activeHelp } = useWallet();
@@ -217,7 +216,7 @@ function DeviceKeyCard({
       {/* Contenido Principal */}
       <div className="flex-1 p-4 space-y-3">
         {/* Fila superior: dispositivo selector + label */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-1.5 shrink-0">
             <button
               onClick={() => onTypeChange("mobile")}
@@ -236,13 +235,13 @@ function DeviceKeyCard({
           </div>
 
           <input
-            className="flex-1 bg-transparent text-base font-semibold text-white placeholder:text-zinc-700 outline-none ml-2 border-b border-transparent hover:border-zinc-850 focus:border-[#6366f1]/50 py-0.5 transition-all duration-200"
+            className="min-w-0 flex-1 bg-transparent text-base font-semibold text-white placeholder:text-zinc-700 outline-none sm:ml-2 border-b border-transparent hover:border-zinc-850 focus:border-[#6366f1]/50 py-0.5 transition-all duration-200"
             value={entry.label}
             onChange={(e) => onLabelChange(e.target.value)}
             placeholder={entry.deviceType === "mobile" ? "Billetera Celular" : "Billetera Laptop"}
           />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             {!hasXpub && (
               <button
                 onClick={onLoadTestKey}
@@ -317,7 +316,7 @@ function DeviceKeyCard({
         ) : null}
 
         {showAdvanced && (
-          <div className="flex gap-4 pt-2 border-t border-[#1b223a] transition-all duration-300">
+          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-[#1b223a] transition-all duration-300 sm:grid-cols-2">
             {/* Fingerprint */}
             <div className="flex-1">
               <span className="text-xs uppercase tracking-wider text-zinc-500 font-mono block mb-1">

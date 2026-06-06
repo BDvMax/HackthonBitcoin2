@@ -24,6 +24,7 @@ export function useVaultSetup() {
     setConfig((prev) => ({ ...prev, ...partial }));
 
   const canAdvance: Record<SetupStep, boolean> = {
+    0: true,
     1: config.requiredApprovals <= config.totalDevices,
     2: config.keys.filter((k) => k.isValid).length === config.totalDevices,
     3: !config.timelock.enabled || (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useWallet, WalletProvider } from "@/context/WalletContext";
 import { StepIndicator } from "./ui/StepIndicator";
 import { Step1Devices } from "./steps/Step1Devices";
@@ -8,8 +8,9 @@ import { Step2Keys } from "./steps/Step2Keys";
 import { Step3Recovery } from "./steps/Step3Recovery";
 import { Step4Export } from "./steps/Step4Export";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, Shield, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud } from "lucide-react";
+import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud, Check, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { SetupStep, VaultConfig } from "@/lib/types/vault";
 
 const STEPS = [
   { id: 1, label: "Dispositivos" },
@@ -21,12 +22,90 @@ const STEPS = [
 function SetupStepperContent() {
   const { step, setStep, config, updateConfig, canAdvance, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp } = useWallet();
   const [showWelcome, setShowWelcome] = useState(true);
+  const [importPanel, setImportPanel] = useState<"descriptor" | null>(null);
+  const [descriptorDraft, setDescriptorDraft] = useState("");
+  const [importMessage, setImportMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const stepContent = {
+  const stepContent: Record<Exclude<SetupStep, 0>, ReactNode> = {
     1: <Step1Devices config={config} onChange={updateConfig} />,
     2: <Step2Keys config={config} onChange={updateConfig} />,
     3: <Step3Recovery config={config} onChange={updateConfig} />,
     4: <Step4Export config={config} />,
+  };
+
+  const applyImportedConfig = (candidate: Partial<VaultConfig>) => {
+    if (
+      typeof candidate.totalDevices !== "number" ||
+      typeof candidate.requiredApprovals !== "number" ||
+      !Array.isArray(candidate.keys) ||
+      !candidate.timelock ||
+      (candidate.network !== "mainnet" && candidate.network !== "testnet")
+    ) {
+      throw new Error("El archivo no parece ser un kit de recuperacion valido.");
+    }
+
+    updateConfig({
+      totalDevices: candidate.totalDevices,
+      requiredApprovals: candidate.requiredApprovals,
+      keys: candidate.keys,
+      timelock: candidate.timelock,
+      network: candidate.network,
+    });
+    setStep(4);
+    setShowWelcome(false);
+    setImportMessage({ type: "success", text: "Kit cargado. Revisa el resumen antes de usarlo." });
+  };
+
+  const handleKitFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const parsed = JSON.parse(await file.text()) as Partial<VaultConfig>;
+      applyImportedConfig(parsed);
+    } catch (error) {
+      setImportMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "No se pudo leer el archivo.",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleDescriptorImport = () => {
+    const clean = descriptorDraft.trim();
+    const looksLikeDescriptor = /^wsh\(.+\)(#[a-z0-9]{8})?$/i.test(clean);
+
+    if (!looksLikeDescriptor) {
+      setImportMessage({
+        type: "error",
+        text: "Pega un descriptor que empiece con wsh(...) y, si aplica, su checksum.",
+      });
+      return;
+    }
+
+    const blob = new Blob([
+      JSON.stringify({ descriptor: clean, importedAt: new Date().toISOString() }, null, 2),
+    ], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `descriptor-importado-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setImportMessage({ type: "success", text: "Descriptor validado y guardado como respaldo JSON." });
+    setImportPanel(null);
+    setDescriptorDraft("");
+  };
+
+  const goBack = () => {
+    setStep((current) => (current > 1 ? ((current - 1) as SetupStep) : 0));
+  };
+
+  const goNext = () => {
+    setStep((current) => (current < 4 ? ((current + 1) as SetupStep) : current));
   };
 
   // Pantalla Inicial: Splash/Welcome
@@ -36,7 +115,7 @@ function SetupStepperContent() {
         {/* Subtle decorative glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#6366f1]/5 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="max-w-md w-full flex flex-col items-center space-y-8 animate-scaleIn relative z-10">
+        <div className="max-w-md w-full flex flex-col items-center space-y-6 sm:space-y-8 animate-scaleIn relative z-10">
           {/* Top Lock Icon */}
           <div className="w-14 h-14 rounded-2xl bg-[#6366f1]/10 border border-[#6366f1]/30 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.15)] relative">
             <Lock className="w-6 h-6 text-[#818cf8]" />
@@ -87,7 +166,7 @@ function SetupStepperContent() {
 
             {/* Opción 2: Abrir Bóveda */}
             <button
-              onClick={() => alert("Próximamente: Podrás cargar tu kit de recuperación desde un archivo JSON para reanudar o restaurar tu bóveda.")}
+              onClick={() => fileInputRef.current?.click()}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-[#1e2640]/50 bg-[#121626]/40 backdrop-blur-sm text-left transition-all duration-300 hover:border-zinc-700 hover:bg-[#181d33]/50 group"
             >
               <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shrink-0 group-hover:text-zinc-300 transition-colors">
@@ -103,10 +182,20 @@ function SetupStepperContent() {
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0 group-hover:translate-x-1 transition-transform" />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleKitFile}
+              className="hidden"
+            />
 
             {/* Opción 3: Importar Descriptor */}
             <button
-              onClick={() => alert("Próximamente: Importa un descriptor BDK/Sparrow para registrar una billetera ya existente.")}
+              onClick={() => {
+                setImportPanel((current) => current === "descriptor" ? null : "descriptor");
+                setImportMessage(null);
+              }}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-[#1e2640]/50 bg-[#121626]/40 backdrop-blur-sm text-left transition-all duration-300 hover:border-zinc-700 hover:bg-[#181d33]/50 group"
             >
               <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shrink-0 group-hover:text-zinc-300 transition-colors">
@@ -122,6 +211,43 @@ function SetupStepperContent() {
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0 group-hover:translate-x-1 transition-transform" />
             </button>
+
+            {importPanel === "descriptor" && (
+              <div className="rounded-xl border border-[#2c3558] bg-[#0d101d]/80 p-4 space-y-3 animate-slideUp">
+                <label className="text-[10px] uppercase tracking-widest text-zinc-400 font-mono font-bold">
+                  Descriptor externo
+                </label>
+                <textarea
+                  value={descriptorDraft}
+                  onChange={(event) => setDescriptorDraft(event.target.value)}
+                  rows={4}
+                  spellCheck={false}
+                  placeholder="wsh(sortedmulti(...))#checksum"
+                  className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-mono text-zinc-200 outline-none focus:border-[#6366f1]/70"
+                />
+                <button
+                  onClick={handleDescriptorImport}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#6366f1] px-3 py-2 text-xs font-bold text-white hover:bg-[#4f46e5]"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5" />
+                  Validar y respaldar descriptor
+                </button>
+              </div>
+            )}
+
+            {importMessage && (
+              <div
+                className={cn(
+                  "flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed",
+                  importMessage.type === "success"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                    : "border-red-500/20 bg-red-500/10 text-red-300"
+                )}
+              >
+                {importMessage.type === "success" ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+                <span>{importMessage.text}</span>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
@@ -220,7 +346,7 @@ function SetupStepperContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-[#090b14] via-[#0d1122] to-[#0c0f1c] text-white flex flex-col items-center justify-start px-4 py-10 transition-all duration-500 ease-in-out">
+    <div className="min-h-screen bg-gradient-to-tr from-[#090b14] via-[#0d1122] to-[#0c0f1c] text-white flex flex-col items-center justify-start px-3 py-6 sm:px-4 sm:py-10 transition-all duration-500 ease-in-out">
       {/* Header */}
       <div className="mb-8 text-center animate-scaleIn">
         <div className="inline-flex items-center gap-2 mb-2">
@@ -235,7 +361,7 @@ function SetupStepperContent() {
       </div>
 
       {/* Step indicator */}
-      <div className="mb-8 animate-scaleIn">
+      <div className="mb-6 w-full overflow-x-auto pb-2 animate-scaleIn sm:mb-8">
         <StepIndicator steps={STEPS} currentStep={step} />
       </div>
 
@@ -243,26 +369,26 @@ function SetupStepperContent() {
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Columna Principal */}
         <div className="lg:col-span-2 flex flex-col space-y-4 animate-scaleIn">
-          <div className="w-full rounded-2xl border border-[#1e2640] bg-[#121626]/80 backdrop-blur-md p-6 md:p-8 shadow-2xl min-h-[400px] flex flex-col justify-between transition-all duration-300">
+          <div className="w-full rounded-2xl border border-[#1e2640] bg-[#121626]/80 backdrop-blur-md p-4 sm:p-6 md:p-8 shadow-2xl min-h-[400px] flex flex-col justify-between transition-all duration-300">
             {/* Animación del paso */}
             <div key={step} className="animate-scaleIn">
-              {stepContent[step]}
+              {step > 0 ? stepContent[step] : null}
             </div>
 
             {/* Navegación */}
-            <div className="mt-8 pt-6 border-t border-[#1b223a] flex justify-between">
+            <div className="mt-8 pt-6 border-t border-[#1b223a] flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
               <Button
                 variant="ghost"
-                className="text-zinc-400 hover:text-white transition-colors"
-                onClick={() => setStep((s) => (s > 0 ? ((s - 1) as any) : s))}
+                className="w-full text-zinc-400 hover:text-white transition-colors sm:w-auto"
+                onClick={goBack}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
               </Button>
 
               {step < 4 ? (
                 <Button
-                  className="bg-[#6366f1] hover:bg-[#4f46e5] text-white font-semibold transition-all shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                  onClick={() => setStep((s) => ((s + 1) as any))}
+                  className="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-semibold transition-all shadow-[0_0_15px_rgba(99,102,241,0.15)] sm:w-auto"
+                  onClick={goNext}
                   disabled={!canAdvance[step]}
                 >
                   Continuar <ArrowRight className="w-4 h-4 ml-2" />

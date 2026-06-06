@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import type { VaultConfig } from "@/lib/types/vault";
 import { useWallet } from "@/context/WalletContext";
 import { generateDescriptor, descriptorWithChecksum } from "@/lib/bitcoin/descriptor";
@@ -8,25 +8,24 @@ import { deriveWshAddresses, type DerivedAddress } from "@/lib/bitcoin/address";
 import { cn } from "@/lib/utils";
 import { Download, Copy, Check, AlertTriangle, Eye, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Term } from "@/components/ui/Term";
 import QRCode from "react-qr-code";
 
 interface Props { config: VaultConfig; }
 
 export function Step4Export({ config }: Props) {
   const { experienceLevel } = useWallet();
-  const [descriptor, setDescriptor] = useState<string>("");
-  const [error, setError] = useState<string>("");
   const [copied, setCopied] = useState(false);
-  const [addresses, setAddresses] = useState<DerivedAddress[]>([]);
+  const [copiedAddress, setCopiedAddress] = useState<number | null>(null);
   const [showAddresses, setShowAddresses] = useState(false);
 
-  useEffect(() => {
+  const exportData = useMemo<{
+    descriptor: string;
+    addresses: DerivedAddress[];
+    error: string;
+  }>(() => {
     try {
       const raw = generateDescriptor(config);
       const withChecksum = descriptorWithChecksum(raw);
-      setDescriptor(withChecksum);
-      setError("");
 
       const validKeys = config.keys
         .filter((k) => k.isValid)
@@ -38,12 +37,17 @@ export function Step4Export({ config }: Props) {
         config.network,
         5
       );
-      setAddresses(addrs);
-    } catch (e: any) {
-      setError(e.message);
-      setAddresses([]);
+      return { descriptor: withChecksum, addresses: addrs, error: "" };
+    } catch (error: unknown) {
+      return {
+        descriptor: "",
+        addresses: [],
+        error: error instanceof Error ? error.message : "No se pudo generar el descriptor.",
+      };
     }
   }, [config]);
+
+  const { descriptor, addresses, error } = exportData;
 
   const copy = async () => {
     await navigator.clipboard.writeText(descriptor);
@@ -51,8 +55,10 @@ export function Step4Export({ config }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const copyAddress = (addr: string) => {
-    navigator.clipboard.writeText(addr);
+  const copyAddress = async (addr: string, index: number) => {
+    await navigator.clipboard.writeText(addr);
+    setCopiedAddress(index);
+    setTimeout(() => setCopiedAddress(null), 1500);
   };
 
   const download = () => {
@@ -119,10 +125,12 @@ export function Step4Export({ config }: Props) {
                 >
                   {copied ? (
                     <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
                       <span className="text-emerald-400">¡Copiado!</span>
                     </>
                   ) : (
                     <>
+                      <Copy className="h-3.5 w-3.5" />
                       Copiar código
                     </>
                   )}
@@ -135,7 +143,7 @@ export function Step4Export({ config }: Props) {
           </div>
 
           {/* Resumen de configuración */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               { label: "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
               { label: "Red", value: config.network === "mainnet" ? "Bitcoin" : "Testnet" },
@@ -185,7 +193,7 @@ export function Step4Export({ config }: Props) {
                   {addresses.map((a) => (
                     <div
                       key={a.index}
-                      className="flex items-center justify-between px-4 py-2.5 gap-4"
+                      className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4"
                     >
                       <span className="text-[9px] font-mono text-zinc-600 shrink-0">
                         {a.path}
@@ -194,10 +202,10 @@ export function Step4Export({ config }: Props) {
                         {a.address}
                       </span>
                       <button
-                        onClick={() => copyAddress(a.address)}
-                        className="text-zinc-400 hover:text-[#818cf8] transition-colors shrink-0 text-xs"
+                        onClick={() => copyAddress(a.address, a.index)}
+                        className="justify-self-start text-zinc-400 hover:text-[#818cf8] transition-colors shrink-0 text-xs sm:justify-self-end"
                       >
-                        Copiar
+                        {copiedAddress === a.index ? "Copiada" : "Copiar"}
                       </button>
                     </div>
                   ))}
