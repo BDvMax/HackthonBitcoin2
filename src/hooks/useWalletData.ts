@@ -355,6 +355,7 @@ export function useWalletData(config: VaultConfig) {
       // CORRECCIÓN AQUÍ 
       const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0).map(a => ({ ...a, chain: 0 as const }));
       const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1).map(a => ({ ...a, chain: 1 as const }));
+
       const derived = [...receiveAddresses, ...changeAddresses];
 
       setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));

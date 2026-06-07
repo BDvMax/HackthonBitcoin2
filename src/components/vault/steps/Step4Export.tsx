@@ -427,7 +427,9 @@ export function Step4Export({ config }: Props) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               { label: experienceLevel === "beginner" ? "Regla de firmas" : "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
+
               { label: "Red", value: config.network},
+
               { label: "Seguro", value: config.timelock.enabled ? `Activo (${blocksToHuman(config.timelock.blocks)})` : "Inactivo" },
             ].map((item) => (
               <div
