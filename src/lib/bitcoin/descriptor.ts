@@ -7,12 +7,12 @@ export function generateDescriptor(config: VaultConfig): string {
 
   const validKeys = keys.filter((k) => k.isValid);
 
-  if (validKeys.length < 2) {
-    throw new Error("Se requieren al menos 2 llaves válidas");
-  }
+  const minKeys = config.vaultType === "single" ? 1 : 2;
 
-  if (requiredApprovals > validKeys.length) {
-    throw new Error("Aprobaciones > llaves disponibles");
+  if (validKeys.length < minKeys) {
+    throw new Error(
+      `Se requieren al menos ${minKeys} llave${minKeys > 1 ? "s" : ""} válida${minKeys > 1 ? "s" : ""}`
+    );
   }
 
   const keyExprs = validKeys.map((k) => {
