@@ -50,7 +50,6 @@ function SetupStepperContent() {
   
   const [highestStep, setHighestStep] = useState<number>(0);
 
-  // Update highest step whenever step changes
   useEffect(() => {
     if (step > highestStep) {
       setHighestStep(step);
@@ -58,7 +57,6 @@ function SetupStepperContent() {
   }, [step, highestStep]);
 
   const handleStepClick = (target: number) => {
-    // Only allow clicking if we've reached it and it's a valid step number
     if (target <= highestStep) {
       playClick();
       setStep(target as SetupStep);
@@ -74,16 +72,13 @@ function SetupStepperContent() {
 
   const inferRequiredApprovals = (candidate: ImportedVaultFile) => {
     if (typeof candidate.requiredApprovals === "number") return candidate.requiredApprovals;
-
     const match = candidate.descriptor?.match(/sortedmulti\((\d+),/i);
     if (match) return Number(match[1]);
-
     return 2;
   };
 
   const normalizeKeys = (keys: ImportedVaultFile["keys"]): XpubEntry[] => {
     if (!Array.isArray(keys)) return [];
-
     return keys.map((key, index) => ({
       id: key.id || (crypto.randomUUID ? crypto.randomUUID() : `imported-${Date.now()}-${index}`),
       label: key.label || `Dispositivo ${index + 1}`,
@@ -97,10 +92,8 @@ function SetupStepperContent() {
 
   const normalizeTimelock = (timelock: ImportedVaultFile["timelock"]): TimelockConfig | null => {
     if (!timelock || typeof timelock !== "object") return null;
-
     const recoveryMode =
       timelock.recoveryMode === "trusted-person" ? "trusted-person" : "current-keys";
-
     return {
       ...DEFAULT_TIMELOCK,
       ...timelock,
@@ -120,8 +113,9 @@ function SetupStepperContent() {
   const applyImportedConfig = (candidate: ImportedVaultFile) => {
     const importedKeys = normalizeKeys(candidate.keys);
     const timelock = normalizeTimelock(candidate.timelock);
-    const network = candidate.network === "mainnet" || candidate.network === "testnet"
-      ? candidate.network
+    const VALID_NETWORKS = ["mainnet", "testnet", "signet", "testnet4"] as const;
+    const network = VALID_NETWORKS.includes(candidate.network as any)
+      ? candidate.network as VaultConfig["network"]
       : "testnet";
     const totalDevices = typeof candidate.totalDevices === "number"
       ? candidate.totalDevices
@@ -147,11 +141,9 @@ function SetupStepperContent() {
   const processFile = async (file: File) => {
     try {
       const text = (await file.text()).replace(/^\uFEFF/, "").trim();
-
       if (!text) {
         throw new Error("El archivo JSON esta vacio. Selecciona el respaldo descargado desde la app.");
       }
-
       const parsed = JSON.parse(text) as ImportedVaultFile;
       applyImportedConfig(parsed);
     } catch (error) {
@@ -161,19 +153,13 @@ function SetupStepperContent() {
           : error instanceof Error
             ? error.message
             : "No se pudo leer el archivo.";
-
-      setImportMessage({
-        type: "error",
-        text: message,
-      });
+      setImportMessage({ type: "error", text: message });
     }
   };
 
   const handleKitFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      processFile(file);
-    }
+    if (file) processFile(file);
     event.target.value = "";
   };
 
@@ -201,7 +187,6 @@ function SetupStepperContent() {
   const handleDescriptorImport = () => {
     const clean = descriptorDraft.trim();
     const looksLikeDescriptor = /^wsh\(.+\)(#[a-z0-9]{8})?$/i.test(clean);
-
     if (!looksLikeDescriptor) {
       setImportMessage({
         type: "error",
@@ -209,7 +194,6 @@ function SetupStepperContent() {
       });
       return;
     }
-
     const blob = new Blob([
       JSON.stringify({ descriptor: clean, importedAt: new Date().toISOString() }, null, 2),
     ], { type: "application/json" });
@@ -238,13 +222,13 @@ function SetupStepperContent() {
   };
 
   if (showWallet) {
-  return (
-    <WalletView
-      config={config}
-      onBack={() => setShowWallet(false)}
-    />
-  );
-}
+    return (
+      <WalletView
+        config={config}
+        onBack={() => setShowWallet(false)}
+      />
+    );
+  }
 
   // Pantalla Inicial: Splash/Welcome
   if (showWelcome) {
@@ -254,7 +238,6 @@ function SetupStepperContent() {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c14] via-transparent to-[#0a0c14] pointer-events-none"></div>
         <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-[#6366f1]/5 rounded-none-full blur-[140px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-[#818cf8]/5 rounded-none-full blur-[120px] pointer-events-none" />
-
 
         <div className="max-w-2xl w-full flex flex-col items-center space-y-8 animate-scaleIn relative z-10">
           {/* Top Branding */}
@@ -272,7 +255,7 @@ function SetupStepperContent() {
           {/* Main Dashboard Panel */}
           <div className="w-full space-y-6 relative z-10 pt-4">
 
-            {/* Main Primary CTA: Nueva Bóveda (Wide, elongated, premium) */}
+            {/* Main Primary CTA */}
             <button
               onClick={() => {
                 playSuccess();
@@ -299,7 +282,7 @@ function SetupStepperContent() {
               <ArrowRight className="w-6 h-6 text-[#818cf8] shrink-0 group-hover:translate-x-2 transition-transform duration-300" />
             </button>
 
-            {/* Separator / Suboptions label */}
+            {/* Separator */}
             <div className="flex items-center gap-4 py-2">
               <div className="h-[1px] flex-1 bg-zinc-800/80" />
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Otras Herramientas de Recuperación</span>
@@ -308,7 +291,7 @@ function SetupStepperContent() {
 
             {/* Grid of Sub-Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Opción 2: Abrir Bóveda */}
+              {/* Cargar Respaldo */}
               <button
                 onClick={() => {
                   playClick();
@@ -343,7 +326,7 @@ function SetupStepperContent() {
                 className="hidden"
               />
 
-              {/* Opción 3: Importar Descriptor */}
+              {/* Importar Descriptor */}
               <button
                 onClick={() => {
                   playToggle();
@@ -405,7 +388,7 @@ function SetupStepperContent() {
             )}
           </div>
 
-          {/* Footer branding */}
+          {/* Footer */}
           <div className="pt-2 text-center">
             <span className="text-xs sm:text-sm font-mono text-zinc-500 tracking-widest uppercase font-bold block">
               Soporte nativo para multisig con timelocks en Bitcoin
@@ -422,6 +405,18 @@ function SetupStepperContent() {
       <div className="min-h-screen relative bg-[#070913] text-white flex flex-col items-center justify-center px-4 py-8 transition-all duration-500 ease-in-out">
         <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 40v-5h5v-5h5v-5h5v-5h5V0H0v20h5v5h5v5h5v5h5v5z' fill='none' stroke='%23818cf8' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")` }}></div>
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c14] via-transparent to-[#0a0c14] pointer-events-none"></div>
+
+        {/* Botón volver */}
+        <button
+          onClick={() => {
+            playClick();
+            setShowWelcome(true);
+          }}
+          className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-2 rounded-none-none border border-zinc-800 bg-[#121626]/80 hover:bg-[#181d33] hover:border-[#6366f1]/55 text-zinc-400 hover:text-white transition-all text-xs font-mono font-bold uppercase tracking-wider"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Inicio
+        </button>
         
         <div className="max-w-2xl w-full text-center mb-8 animate-scaleIn relative z-10">
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl leading-tight">
@@ -429,9 +424,9 @@ function SetupStepperContent() {
           </h1>
         </div>
 
-        <div className="w-full max-w-4xl space-y-8 animate-slideUp relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Beginner */}
+        <div className="w-full max-w-2xl space-y-8 animate-slideUp relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Básico */}
             <button
               onClick={() => {
                 playToggle();
@@ -449,41 +444,15 @@ function SetupStepperContent() {
               </div>
               <div className="space-y-2">
                 <span className="font-bold text-xl text-white block group-hover:text-[#818cf8] transition-colors">
-                  Sencillo
+                  Básico
                 </span>
                 <span className="text-sm text-zinc-400 block leading-relaxed px-2">
-                  Explicaciones directas y cotidianas, sin tecnicismos.
+                  Explicaciones sencillas, sin tecnicismos y con ayudas visuales interactivas.
                 </span>
               </div>
             </button>
 
-            {/* Intermediate */}
-            <button
-              onClick={() => {
-                playToggle();
-                setExperienceLevel("intermediate");
-              }}
-              className={cn(
-                "flex flex-col items-center justify-center gap-5 p-6 rounded-none-none border text-center transition-all duration-300 group aspect-square",
-                experienceLevel === "intermediate"
-                  ? "bg-[#121626]/95 backdrop-blur-md border-[#6366f1]/80 shadow-[0_0_20px_rgba(99,102,241,0.25)] scale-105"
-                  : "bg-[#0a0c14]/90 backdrop-blur-md border-[#1f2642] hover:border-[#2f3a63] hover:bg-[#121626]/95 hover:scale-105"
-              )}
-            >
-              <div className="w-16 h-16 rounded-none-full bg-[#6366f1]/10 flex items-center justify-center shrink-0 border border-[#6366f1]/20 group-hover:bg-[#6366f1]/20 transition-colors">
-                <GraduationCap className={cn("w-8 h-8", experienceLevel === "intermediate" ? "text-[#818cf8]" : "text-zinc-500 group-hover:text-[#818cf8]")} />
-              </div>
-              <div className="space-y-2">
-                <span className="font-bold text-xl text-white block group-hover:text-[#818cf8] transition-colors">
-                  Guiado
-                </span>
-                <span className="text-sm text-zinc-400 block leading-relaxed px-2">
-                  Ayuda visual interactiva con glosario integrado.
-                </span>
-              </div>
-            </button>
-
-            {/* Advanced */}
+            {/* Técnico */}
             <button
               onClick={() => {
                 playToggle();
@@ -527,7 +496,6 @@ function SetupStepperContent() {
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 40v-5h5v-5h5v-5h5v-5h5V0H0v20h5v5h5v5h5v5h5v5z' fill='none' stroke='%23818cf8' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")` }}></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c14] via-transparent to-[#0a0c14] pointer-events-none"></div>
       
-      {/* Decorative background glows */}
       <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-[#6366f1]/5 rounded-none-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-[#818cf8]/5 rounded-none-full blur-[100px] pointer-events-none" />
 
@@ -558,7 +526,7 @@ function SetupStepperContent() {
 
       {/* Outer Layout container with lateral Back button */}
       <div className="w-full max-w-7xl flex gap-6 items-start relative z-10">
-        {/* Lateral Floating Back Button (Hidden on small screens) */}
+        {/* Lateral Floating Back Button */}
         {step > 0 && (
           <button
             onClick={goBack}
@@ -570,12 +538,10 @@ function SetupStepperContent() {
         )}
 
         <div className="flex-1 w-full">
-          {/* Layout de dos columnas */}
           <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Columna Principal */}
             <div className="lg:col-span-2 flex flex-col space-y-4 animate-scaleIn">
               <div className="w-full rounded-none-none glass-card p-4 sm:p-6 md:p-8 shadow-2xl min-h-[420px] flex flex-col justify-between transition-all duration-300">
-                {/* Animación del paso */}
                 <div key={step} className="animate-scaleIn">
                   {step > 0 ? stepContent[step] : null}
                 </div>
@@ -619,7 +585,7 @@ function SetupStepperContent() {
                   Nivel de Detalle
                 </span>
                 <span className="text-xs bg-[#6366f1]/20 text-[#a5b4fc] border border-[#6366f1]/30 px-2.5 py-1 rounded-none-none font-bold capitalize">
-                  {experienceLevel === "beginner" ? "Sencillo" : experienceLevel === "intermediate" ? "Guiado" : "Técnico"}
+                  {experienceLevel === "beginner" ? "Básico" : "Técnico"}
                 </span>
               </div>
 
@@ -699,7 +665,7 @@ function SetupStepperContent() {
                 </div>
               </div>
 
-              {/* Crisis/Losses Simulator in Sidebar */}
+              {/* Simulador de Crisis */}
               {config.timelock.enabled && (
                 <div className="p-3.5 bg-[#181227]/40 border border-[#6366f1]/20 rounded-none-none space-y-3 transition-all duration-300">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#a5b4fc]">
@@ -759,8 +725,7 @@ function SetupStepperContent() {
   </div>
 </div>
 
-
-      {/* Floating VS Code-style Tooltip Popup */}
+      {/* Floating Tooltip Popup */}
       {activeHelp && (
         <>
           <div

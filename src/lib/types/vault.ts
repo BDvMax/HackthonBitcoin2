@@ -19,6 +19,7 @@ export interface TimelockConfig {
 }
 
 export interface VaultConfig {
+  vaultType: "single" | "multi"; 
   totalDevices: number;
   requiredApprovals: number;
   keys: XpubEntry[];

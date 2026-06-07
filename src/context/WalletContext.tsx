@@ -9,8 +9,7 @@ import { deriveWshAddresses } from "@/lib/bitcoin/address";
 export type VaultType = "single-sig" | "multisig";
 
 const DEFAULT_CONFIG: VaultConfig = {
-  vaultType: "single-sig",
-
+  vaultType: "single", 
   totalDevices: 1,
   requiredApprovals: 1,
 
@@ -66,7 +65,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     0: true,
     1: config.requiredApprovals <= config.totalDevices,
     2:
-     config.vaultType === "single-sig"
+     config.vaultType === "single"
     ? config.keys.some((k) => k.isValid)
     : config.keys.filter((k) => k.isValid).length === config.totalDevices,
     3: !config.timelock.enabled || (
