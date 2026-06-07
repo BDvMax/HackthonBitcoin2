@@ -157,7 +157,7 @@ function getXpubErrorMessage(
 
 export function Step2Keys({ config, onChange }: Props) {
   const { totalDevices, keys, network, vaultType } = config;
-  const { experienceLevel } = useWallet();
+  const { experienceLevel, tutorialStep, setTutorialStep } = useWallet();
   const { playClick, playSuccess, playError, playToggle } = useSoundEffects();
 
   const [keygenOpen, setKeygenOpen] = useState(false);
@@ -171,6 +171,7 @@ export function Step2Keys({ config, onChange }: Props) {
   const [keygenStep, setKeygenStep] = useState<"generate" | "result">("generate");
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [showBackupHelpModal, setShowBackupHelpModal] = useState(false);
   const [seedBackedUp, setSeedBackedUp] = useState(false);
 
   const slotCount = vaultType === "single" ? 1 : totalDevices;
@@ -261,6 +262,7 @@ export function Step2Keys({ config, onChange }: Props) {
       setGeneratedKey({ mnemonic: mnemonicStr, xprv, xpub, fingerprint, derivationPath, network });
       setKeygenStep("result");
       playSuccess();
+      if (tutorialStep === 6) setTutorialStep(7);
     } catch (err) {
       console.error("Error generando claves:", err);
       playError();
@@ -338,8 +340,11 @@ export function Step2Keys({ config, onChange }: Props) {
         keygenOpen ? "border-[#6366f1] shadow-[0_0_20px_rgba(99,102,241,0.15)] bg-[#121626]" : "border border-[#6366f1]/50 bg-[#6366f1]/5 hover:bg-[#6366f1]/10 hover:border-[#6366f1]/80"
       )}>
         <button
-          onClick={() => { playClick(); setKeygenOpen((v) => !v); }}
-          className="w-full flex items-center justify-between px-5 py-5 transition-colors relative group"
+          onClick={() => { playClick(); setKeygenOpen((v) => !v); if (tutorialStep === 5) setTutorialStep(6); }}
+          className={cn(
+            "w-full flex items-center justify-between px-5 py-5 transition-colors relative group",
+            tutorialStep === 5 && !keygenOpen && validCount === 0 && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
+          )}
         >
           <div className="flex items-center gap-4 relative z-10">
             <div className="w-12 h-12 rounded-full bg-[#6366f1] flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-110 transition-transform">
@@ -461,7 +466,10 @@ export function Step2Keys({ config, onChange }: Props) {
                 <button
                   onClick={handleGenerate}
                   disabled={generating}
-                  className="w-full py-3 bg-[#6366f1] hover:bg-[#4f52d9] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                  className={cn(
+                    "w-full py-3 bg-[#6366f1] hover:bg-[#4f52d9] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2",
+                    tutorialStep === 6 && !generatedKey && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
+                  )}
                 >
                   {generating ? <><RefreshCw className="w-4 h-4 animate-spin" />Generando…</> : <><Sparkles className="w-4 h-4" />Generar semilla ahora</>}
                 </button>
@@ -469,12 +477,20 @@ export function Step2Keys({ config, onChange }: Props) {
             )}
 
             {keygenStep === "result" && generatedKey && (
-              <div className="p-5 space-y-6">
-                <div className="flex gap-3 p-4 bg-[#121626]/80 border border-[#6366f1]/40 rounded-xl">
+              <>
+                <div className="p-5 space-y-6">
+                  <div className="flex gap-3 p-4 bg-[#121626]/80 border border-[#6366f1]/40 rounded-xl">
                   <ShieldCheck className="w-6 h-6 text-[#818cf8] shrink-0 mt-0.5" />
                   <div className="text-sm text-zinc-300 leading-relaxed">
-                    <strong className="block text-white mb-1">Guarda tu semilla en papel ahora.</strong>
-                    Nunca la compartas. Nunca la guardes en formato digital o en la nube.
+                    <strong className="block text-white mb-1">Guarda tu semilla usando un método físico seguro.</strong>
+                    Nunca la guardes en formato digital o en la nube.{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowBackupHelpModal(true)}
+                      className="text-[#818cf8] hover:text-white underline underline-offset-2 font-semibold inline-flex items-center gap-1"
+                    >
+                      ¿Qué opciones tengo? <HelpCircle className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -508,8 +524,11 @@ export function Step2Keys({ config, onChange }: Props) {
                     {!showMnemonic && !showWarningModal && (
                       <div className="absolute inset-0 flex items-center justify-center z-10">
                         <button
-                          onClick={() => setShowWarningModal(true)}
-                          className="px-5 py-2.5 bg-[#121626] border border-[#6366f1]/40 hover:bg-[#6366f1]/20 text-white font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.1)] flex items-center gap-2 rounded-none transition-all hover:scale-105"
+                          onClick={() => { setShowWarningModal(true); if (tutorialStep === 7) setTutorialStep(8); }}
+                          className={cn(
+                            "px-5 py-2.5 bg-[#121626] border border-[#6366f1]/40 hover:bg-[#6366f1]/20 text-white font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.1)] flex items-center gap-2 rounded-none transition-all hover:scale-105",
+                            tutorialStep === 7 && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
+                          )}
                         >
                           <Eye className="w-4 h-4 text-[#818cf8]" /> Mostrar Palabras
                         </button>
@@ -535,8 +554,12 @@ export function Step2Keys({ config, onChange }: Props) {
                               playSuccess();
                               setShowWarningModal(false);
                               setShowMnemonic(true);
+                              if (tutorialStep === 8) setTutorialStep(9);
                             }}
-                            className="px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold transition-colors"
+                            className={cn(
+                              "px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold transition-colors",
+                              tutorialStep === 8 && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
+                            )}
                           >
                             Mostrar
                           </button>
@@ -557,7 +580,7 @@ export function Step2Keys({ config, onChange }: Props) {
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-500/80 cursor-help" />
                         <div className="pointer-events-none absolute bottom-full mb-2 left-0 w-[220px] opacity-0 group-hover:opacity-100 transition-opacity bg-amber-950 border border-amber-900/50 text-amber-200 text-xs p-2.5 rounded shadow-2xl z-50">
                           <strong className="block mb-1 text-amber-400">Ruta de Derivación:</strong>
-                          Es el "mapa" técnico que dice cómo calcular las direcciones a partir de tu semilla. Mantén el valor por defecto si eres principiante.
+                          Es el "mapa" técnico que dice cómo calcular las direcciones a partir de tu semilla. Mantén el valor por defecto si eres nuevo.
                         </div>
                       </div>
                     </div>
@@ -565,38 +588,65 @@ export function Step2Keys({ config, onChange }: Props) {
                   </div>
                 </div>
 
-                {/* Layer 8 Error Prevention Checkbox */}
+                 {/* Layer 8 Error Prevention Checkbox */}
                 <label 
                   className={cn(
-                    "flex items-start gap-4 p-5 mt-5 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]",
-                    seedBackedUp ? "border-[#6366f1] bg-[#6366f1]/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]" : "border-[#1e2640] bg-[#121626] hover:border-[#6366f1]/50"
+                    "flex items-start gap-4 p-5 mt-5 rounded-xl border-2 transition-all",
+                    !showMnemonic 
+                      ? "border-zinc-900 bg-zinc-950/40 opacity-50 cursor-not-allowed"
+                      : seedBackedUp 
+                      ? "border-[#6366f1] bg-[#6366f1]/10 shadow-[0_0_15px_rgba(99,102,241,0.2)] cursor-pointer hover:scale-[1.01] active:scale-[0.99]" 
+                      : "border-[#1e2640] bg-[#121626] hover:border-[#6366f1]/50 cursor-pointer hover:scale-[1.01] active:scale-[0.99]",
+                    tutorialStep === 9 && showMnemonic && !seedBackedUp && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
                   )}
                 >
                   <div className="relative flex items-center justify-center shrink-0">
                     <input
                       type="checkbox"
+                      disabled={!showMnemonic}
                       checked={seedBackedUp}
                       onChange={(e) => {
+                        if (!showMnemonic) return;
                         try { playToggle(); } catch(err) {}
                         setSeedBackedUp(e.target.checked);
+                        if (e.target.checked && tutorialStep === 9) setTutorialStep(10);
                       }}
-                      className="w-7 h-7 cursor-pointer appearance-none rounded border-2 border-zinc-600 bg-zinc-900 checked:bg-[#6366f1] checked:border-[#6366f1] transition-colors"
+                      className="w-7 h-7 cursor-pointer disabled:cursor-not-allowed appearance-none rounded border-2 border-zinc-600 bg-zinc-900 checked:bg-[#6366f1] checked:border-[#6366f1] transition-colors"
                     />
                     {seedBackedUp && <Check className="absolute w-5 h-5 text-white pointer-events-none" />}
                   </div>
                   <span className={cn(
                     "text-xs sm:text-sm leading-relaxed select-none transition-colors",
-                    seedBackedUp ? "text-white font-medium" : "text-zinc-400 font-normal"
+                    !showMnemonic ? "text-zinc-650" : seedBackedUp ? "text-white font-medium" : "text-zinc-400 font-normal"
                   )}>
-                    Confirmo que he respaldado estas palabras en un <strong className="text-[#818cf8]">lugar físico seguro (papel, placa de metal, etc.)</strong> y no en medios digitales. Entiendo que si las pierdo, perderé acceso a mis fondos.
+                    {!showMnemonic ? (
+                      <span className="text-amber-500/80 font-semibold flex items-center gap-1.5">
+                        <Lock className="w-4 h-4 shrink-0" /> Revela las palabras secretas arriba para poder confirmar.
+                      </span>
+                    ) : (
+                      <>
+                        Confirmo que he respaldado estas palabras en un{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowBackupHelpModal(true)}
+                          className="text-[#818cf8] hover:text-white underline font-bold"
+                        >
+                          medio físico seguro
+                        </button>{" "}
+                        y no en medios digitales. Entiendo que si las pierdo, perderé acceso a mis fondos.
+                      </>
+                    )}
                   </span>
                 </label>
 
                 <div className="space-y-2 pt-1">
                   <button
-                    onClick={() => handleUseKey()}
+                    onClick={() => { handleUseKey(); if (tutorialStep === 10) setTutorialStep(11); }}
                     disabled={!seedBackedUp}
-                    className="w-full py-3 bg-[#6366f1] hover:bg-[#4f46e5] disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:border-zinc-800 disabled:cursor-not-allowed border border-[#6366f1]/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] text-white text-sm font-bold rounded-none transition-all flex items-center justify-center gap-2"
+                    className={cn(
+                      "w-full py-3 bg-[#6366f1] hover:bg-[#4f46e5] disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:border-zinc-800 disabled:cursor-not-allowed border border-[#6366f1]/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] text-white text-sm font-bold rounded-none transition-all flex items-center justify-center gap-2",
+                      tutorialStep === 10 && seedBackedUp && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
+                    )}
                   >
                     <ChevronRight className="w-4 h-4" />
                     Usar esta llave en el siguiente espacio vacío
@@ -641,7 +691,9 @@ export function Step2Keys({ config, onChange }: Props) {
                   </div>
                 </div>
               </div>
-            )}
+              <BackupHelpModal isOpen={showBackupHelpModal} onClose={() => setShowBackupHelpModal(false)} />
+            </>
+          )}
           </div>
         )}
       </div>
@@ -680,6 +732,68 @@ export function Step2Keys({ config, onChange }: Props) {
         ))}
       </div>
 
+      {/* Backup Help Modal */}
+      {showBackupHelpModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#0c0f1d] border border-[#1e2640] p-6 max-w-lg w-full shadow-2xl space-y-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#6366f1]/15 border border-[#6366f1]/30 flex items-center justify-center text-[#818cf8]">
+                  <HelpCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Métodos de Respaldo Físico Seguro</h3>
+                  <p className="text-xs text-zinc-400">Elige un método analógico y nunca guardes datos digitalmente.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBackupHelpModal(false)}
+                className="text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs leading-relaxed text-zinc-300">
+              <p className="text-red-400 font-semibold bg-red-950/20 border border-red-900/30 p-3 rounded-none">
+                🚨 <strong className="text-white">Regla de Oro:</strong> Nunca tomes fotos, capturas de pantalla, ni guardes la semilla en archivos de texto, correos o la nube. Si tu dispositivo se infecta o te hackean, perderás tus fondos.
+              </p>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-[#070913] border border-[#1e2640] rounded-none">
+                  <h4 className="font-bold text-white mb-1">Option 1: Hojas de papel de recuperación (Recovery Sheet)</h4>
+                  <p className="text-zinc-400">
+                    Escribe a mano las palabras en un papel resistente usando tinta permanente o bolígrafo de calidad. Almacénalo en una bolsa hermética (Ziploc) con desecante de sílice para evitar la humedad.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-[#070913] border border-[#1e2640] rounded-none">
+                  <h4 className="font-bold text-[#818cf8] mb-1">Option 2: Placas de acero o titanio (Metal Seed Backup)</h4>
+                  <p className="text-zinc-400">
+                    Graba o estampa las palabras en una placa metálica especial de acero inoxidable o titanio. Son extremadamente resistentes a incendios (hasta 1400°C), inundaciones, golpes y corrosión química. Recomendado para ahorros de largo plazo.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-[#070913] border border-[#1e2640] rounded-none">
+                  <h4 className="font-bold text-emerald-400 mb-1">Option 3: Cápsulas físicas de metal (Backup Capsules)</h4>
+                  <p className="text-zinc-400">
+                    Cápsulas de acero donde deslizas pequeñas fichas metálicas pregrabadas con las letras correspondientes a tu semilla. Ofrece gran discreción visual y alta durabilidad.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowBackupHelpModal(false)}
+                className="px-6 py-2.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold rounded-none transition-colors"
+              >
+                Entendido, cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -831,15 +945,6 @@ function DeviceKeyCard({
           />
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            {!hasXpub && (
-              <button
-                onClick={onLoadTestKey}
-                className="text-sm text-zinc-300 hover:text-white flex items-center gap-1.5 bg-[#1c223a] px-3 py-2 rounded-none border border-[#2c3558] transition-all duration-300 font-semibold"
-              >
-                <Sparkles className="w-4 h-4 text-[#818cf8]" />
-                Prueba
-              </button>
-            )}
             {hasXpub && (
               <button onClick={onClear} className="text-zinc-500 hover:text-red-400 p-2 transition-colors">
                 <Trash2 className="w-5 h-5" />
@@ -995,6 +1100,59 @@ function DeviceKeyCard({
             <span>Listo · {truncateXpub(entry.xpub)}</span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Backup Help Modal
+// ══════════════════════════════════════════════════════════════════════════════
+function BackupHelpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-[#0c0f1d] border border-[#6366f1]/30 rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4 text-[#818cf8]">
+            <HelpCircle className="w-6 h-6" />
+            <h3 className="text-lg font-bold text-white">¿Qué es un medio físico seguro?</h3>
+          </div>
+          <div className="space-y-4 text-sm text-zinc-300">
+            <p>
+              Tus palabras secretas <strong>nunca deben estar conectadas a internet</strong>. Evita guardarlas en:
+            </p>
+            <ul className="space-y-2 pl-2">
+              <li className="flex items-center gap-2 text-red-400">
+                <X className="w-4 h-4" /> Notas del teléfono o capturas de pantalla
+              </li>
+              <li className="flex items-center gap-2 text-red-400">
+                <X className="w-4 h-4" /> Gestores de contraseñas, Google Drive, o emails
+              </li>
+              <li className="flex items-center gap-2 text-red-400">
+                <X className="w-4 h-4" /> Documentos de texto en tu PC
+              </li>
+            </ul>
+            <p className="pt-2"><strong>Opciones recomendadas:</strong></p>
+            <ul className="space-y-2 pl-2">
+              <li className="flex items-center gap-2 text-emerald-400">
+                <Check className="w-4 h-4" /> <strong>Papel y lápiz:</strong> Escríbelas y guárdalas en un lugar seguro.
+              </li>
+              <li className="flex items-center gap-2 text-emerald-400">
+                <Check className="w-4 h-4" /> <strong>Placas de acero (Metal seed):</strong> Inmune a fuego y agua. Recomendado a largo plazo.
+              </li>
+            </ul>
+          </div>
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold rounded transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

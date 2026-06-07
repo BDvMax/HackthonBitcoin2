@@ -14,7 +14,7 @@ interface Props {
 
 export function Step1Devices({ config, onChange }: Props) {
   const { totalDevices, requiredApprovals, network, vaultType } = config;
-  const { experienceLevel } = useWallet();
+  const { experienceLevel, tutorialStep, setTutorialStep } = useWallet();
   const [showComparison, setShowComparison] = useState(false);
 
   const NETWORK_OPTIONS = [
@@ -137,6 +137,7 @@ export function Step1Devices({ config, onChange }: Props) {
             onClick={() => {
               if (typeof window !== "undefined") (window as any).__playClick?.();
               handleVaultTypeChange("single");
+              if (tutorialStep === 2) setTutorialStep(3);
             }}
             className={cn(
               "p-4 rounded-xl border text-left transition-all duration-300 flex flex-col gap-2",
@@ -164,12 +165,14 @@ export function Step1Devices({ config, onChange }: Props) {
             onClick={() => {
               if (typeof window !== "undefined") (window as any).__playClick?.();
               handleVaultTypeChange("multi");
+              if (tutorialStep === 2) setTutorialStep(3);
             }}
             className={cn(
               "p-4 rounded-xl border text-left transition-all duration-300 flex flex-col gap-2",
               isMulti
                 ? "border-[#6366f1] bg-[#6366f1]/5 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/60"
+                : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/60",
+              tutorialStep === 2 && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
             )}
           >
             <div className="flex items-center gap-2">
@@ -306,12 +309,14 @@ export function Step1Devices({ config, onChange }: Props) {
               onClick={() => {
                 if (typeof window !== "undefined") (window as any).__playClick?.();
                 onChange({ network: opt.id });
+                if (tutorialStep === 3) setTutorialStep(4);
               }}
               className={cn(
                 "p-3 rounded-xl border text-left transition-all duration-300 flex items-center justify-between h-20",
                 network === opt.id
                   ? "border-[#6366f1] bg-[#6366f1]/5 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                  : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/60"
+                  : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900/60",
+                tutorialStep === 3 && "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#070913] shadow-[0_0_25px_rgba(52,211,153,0.5)]"
               )}
             >
               <div className="flex flex-col justify-center">

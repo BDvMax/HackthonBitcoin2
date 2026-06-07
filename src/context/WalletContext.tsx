@@ -48,6 +48,8 @@ interface WalletState {
   setExperienceLevel: (level: ExperienceLevel) => void;
   activeHelp: HelpContent | null;
   setActiveHelp: (help: HelpContent | null) => void;
+  tutorialStep: number | null;
+  setTutorialStep: (step: number | null | ((prev: number | null) => number | null)) => void;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -57,6 +59,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<VaultConfig>(DEFAULT_CONFIG);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("intermediate");
   const [activeHelp, setActiveHelp] = useState<HelpContent | null>(null);
+  const [tutorialStep, setTutorialStep] = useState<number | null>(null);
 
   const updateConfig = (patch: Partial<VaultConfig>) =>
     setConfig((prev) => ({ ...prev, ...patch }));
@@ -87,7 +90,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <WalletContext.Provider value={{ step, setStep, config, updateConfig, canAdvance, generateDescriptor, deriveAddresses, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp }}>
+    <WalletContext.Provider value={{ step, setStep, config, updateConfig, canAdvance, generateDescriptor, deriveAddresses, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp, tutorialStep, setTutorialStep }}>
       {children}
     </WalletContext.Provider>
   );

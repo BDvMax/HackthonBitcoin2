@@ -7,7 +7,7 @@ import { generateDescriptor, descriptorWithChecksum } from "@/lib/bitcoin/descri
 import { deriveWshAddresses, type DerivedAddress } from "@/lib/bitcoin/address";
 import { blocksToHuman } from "@/lib/bitcoin/timelock";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Check, Copy, Download, ChevronDown, Eye, Maximize2, X, FileText, Share2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ChevronDown, Eye, Maximize2, X, FileText, Share2, Lock, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import QRCode from "react-qr-code";
 import { jsPDF } from "jspdf";
@@ -67,6 +67,9 @@ export function Step4Export({ config }: Props) {
   const [showAddresses, setShowAddresses] = useState(true);
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
   const [showAdvancedText, setShowAdvancedText] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pdfPassword, setPdfPassword] = useState("");
+  const [showPasswordText, setShowPasswordText] = useState(false);
 
   // States for blockchain explorer
   const [loadingAddressInfo, setLoadingAddressInfo] = useState(false);
@@ -175,8 +178,14 @@ export function Step4Export({ config }: Props) {
     }
   };
 
-  const downloadPdf = async () => {
-    const doc = new jsPDF();
+  const downloadPdf = async (password?: string) => {
+    const doc = new jsPDF(password ? {
+      encryption: {
+        userPassword: password,
+        ownerPassword: password,
+        userPermissions: ["print", "copy"]
+      }
+    } : undefined);
     const brandColor: [number, number, number] = [99, 102, 241]; // #6366f1
     const darkBg: [number, number, number] = [10, 12, 20]; // #0a0c14
     const lightText: [number, number, number] = [240, 240, 240];
@@ -195,23 +204,27 @@ export function Step4Export({ config }: Props) {
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
-    doc.text("Reporte de Respaldo y Recuperación", 14, 30);
+    doc.text("Reporte de Respaldo y Kit de Recuperación Oficial", 14, 30);
 
     // 2. Summary Info
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("Detalles de Configuración", 14, 55);
+    doc.text("Detalles de Configuración de la Bóveda", 14, 52);
 
-    doc.setFontSize(11);
+    doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
-    doc.text(`Fecha de Creación: ${new Date().toLocaleDateString()}`, 14, 65);
-    doc.text(`Esquema Multifirma: ${config.requiredApprovals} de ${config.totalDevices}`, 14, 72);
-    doc.text(`Red: ${config.network}`, 14, 79);
-    doc.text(`Seguro de Emergencia: ${config.timelock.enabled ? "Activado" : "Desactivado"}`, 14, 86);
+    doc.text(`Fecha de Creación: ${new Date().toLocaleDateString()}`, 14, 60);
+    doc.text(`Esquema Multifirma: ${config.requiredApprovals} de ${config.totalDevices} firmas`, 14, 66);
+    doc.text(`Red de Bitcoin: ${config.network.toUpperCase()}`, 14, 72);
+    doc.text(`Seguro de Emergencia (Timelock): ${config.timelock.enabled ? "Activado" : "Desactivado"}`, 14, 78);
     if (config.timelock.enabled) {
-      doc.text(`Tiempo de Bloqueo: ~ ${blocksToHuman(config.timelock.blocks)}`, 14, 93);
+      doc.text(`Tiempo de Bloqueo: ~ ${blocksToHuman(config.timelock.blocks)} (${config.timelock.blocks} bloques)`, 14, 84);
+      const modeText = config.timelock.recoveryMode === "current-keys" 
+        ? `Llaves propias (Quórum reducido a ${config.timelock.recoveryApprovals} firma/s)` 
+        : `Persona de confianza (${config.timelock.trustedKey?.label || "Llave Externa"})`;
+      doc.text(`Esquema de Recuperación: ${modeText}`, 14, 90);
     }
 
     // 3. QR Code
@@ -222,47 +235,52 @@ export function Step4Export({ config }: Props) {
         color: { dark: '#000000FF', light: '#FFFFFFFF' }
       });
       doc.addImage(qrDataUrl, "PNG", pageWidth - 65, 45, 50, 50);
-      doc.setFontSize(9);
+      doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text("Escanea el Descriptor", pageWidth - 56, 98);
+      doc.text("Escanea para importar en Wallet", pageWidth - 61, 98);
     } catch (err) {
       console.error("Error generating QR for PDF", err);
     }
 
     // 4. Descriptor String Box
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("Descriptor BIP380", 14, 110);
+    doc.text("Descriptor Público BIP380 con Checksum", 14, 106);
 
     doc.setFillColor(245, 245, 250);
-    doc.rect(14, 115, pageWidth - 28, 25, "F");
+    doc.rect(14, 110, pageWidth - 28, 28, "F");
 
-    doc.setFontSize(9);
+    doc.setFontSize(7.5);
     doc.setFont("courier", "normal");
     doc.setTextColor(40, 40, 40);
     const splitDescriptor = doc.splitTextToSize(descriptor, pageWidth - 32);
-    doc.text(splitDescriptor, 16, 122);
+    doc.text(splitDescriptor, 16, 116);
 
     // 5. Table of Keys
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("Registro de Dispositivos (Llaves Públicas)", 14, 150);
+    doc.text("Registro de Dispositivos y Llaves Públicas (Xpubs)", 14, 148);
 
     const keysData = config.keys.map((k, i) => [
       `#${i + 1}`,
       k.label || `Llave ${i + 1}`,
-      k.deviceType || "mobile",
-      k.xpub ? k.xpub.substring(0, 30) + "..." : "N/A"
+      k.deviceType || "Desconocido",
+      k.fingerprint || "N/A",
+      k.derivationPath || "N/A",
+      k.xpub || "N/A"
     ]);
 
     autoTable(doc, {
-      startY: 155,
-      head: [["ID", "Nombre", "Tipo", "Xpub (Parcial)"]],
+      startY: 152,
+      head: [["ID", "Nombre", "Dispositivo", "Huella (FP)", "Ruta Deriv.", "Xpub Completo"]],
       body: keysData,
       headStyles: { fillColor: brandColor, textColor: 255 },
-      styles: { fontSize: 9, cellPadding: 4 },
+      styles: { fontSize: 7, cellPadding: 2.5, overflow: "linebreak" },
+      columnStyles: {
+        5: { font: "courier", fontSize: 5.5, cellWidth: 80 }
+      },
       alternateRowStyles: { fillColor: [248, 248, 252] },
     });
 
@@ -291,53 +309,53 @@ export function Step4Export({ config }: Props) {
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
     doc.text("Direcciones e Instrucciones de Recuperación", 14, 30);
 
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("Instrucciones de Restauración", 14, 55);
+    doc.text("Instrucciones de Restauración", 14, 52);
 
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
-    doc.line(14, 60, pageWidth - 14, 60);
+    doc.line(14, 56, pageWidth - 14, 56);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50, 50, 50);
 
     const instructions = [
-      "1. Mantenga este documento en un lugar seguro. El 'Descriptor BIP380' (en la página 1) es todo lo que necesita para restaurar su bóveda en cualquier software compatible con Bitcoin.",
-      "2. Necesitará usar sus dispositivos de hardware para firmar y autorizar cualquier retiro.",
-      "3. Si activó el Seguro de Emergencia (Timelock), en caso de pérdida, debe esperar el tiempo de bloqueo definido para recuperar los fondos con menos firmas.",
-      "4. Puede depositar fondos en cualquiera de las direcciones mostradas a continuación. Son direcciones de contrato exclusivas de su bóveda."
+      "1. Mantenga este documento en un lugar seguro y analógico. El 'Descriptor BIP380' (en la página 1) es todo lo que necesita para restaurar su bóveda en cualquier software de Bitcoin compatible (Sparrow Wallet, Liana, etc.).",
+      "2. Necesitará usar sus dispositivos físicos de hardware para firmar y autorizar cualquier transacción.",
+      "3. Si activó el Seguro de Emergencia (Timelock), en caso de pérdida de llaves, debe esperar el tiempo de bloqueo definido para poder gastar/recuperar los fondos utilizando un quórum de firmas reducido o una llave de confianza.",
+      "4. Puede depositar fondos en cualquiera de las direcciones mostradas a continuación. Son direcciones nativas de contrato P2WSH multifirma exclusivas de su configuración."
     ];
 
-    let currentY = 68;
+    let currentY = 62;
     instructions.forEach((text) => {
       const lines = doc.splitTextToSize(text, pageWidth - 28);
       doc.text(lines, 14, currentY);
-      currentY += lines.length * 5 + 4;
+      currentY += lines.length * 4.5 + 3;
     });
 
-    currentY += 5;
+    currentY += 4;
 
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("Direcciones de Depósito", 14, currentY);
+    doc.text("Direcciones de Depósito Derivadas (Primeras 5)", 14, currentY);
 
-    currentY += 5;
+    currentY += 4;
     doc.setDrawColor(200, 200, 200);
     doc.line(14, currentY, pageWidth - 14, currentY);
-    currentY += 8;
+    currentY += 6;
 
     const addressesData = addresses.map((a) => [a.path, a.address]);
 
     autoTable(doc, {
       startY: currentY,
-      head: [["Derivación", "Dirección"]],
+      head: [["Ruta de Derivación", "Dirección de Recibo"]],
       body: addressesData,
       headStyles: { fillColor: brandColor, textColor: 255 },
-      styles: { fontSize: 9, cellPadding: 4, font: "courier" },
+      styles: { fontSize: 8.5, cellPadding: 3, font: "courier" },
       alternateRowStyles: { fillColor: [248, 248, 252] },
     });
 
@@ -452,8 +470,8 @@ export function Step4Export({ config }: Props) {
             </p>
           </div>
 
-          {/* Direcciones derivadas (Oculto para principiantes) */}
-          {experienceLevel !== "beginner" && addresses.length > 0 && (
+          {/* Direcciones derivadas */}
+          {addresses.length > 0 && (
             <div className="rounded-none-none border border-[#1e2640] bg-zinc-950/40">
               <button
                 onClick={() => setShowAddresses((v) => !v)}
@@ -506,8 +524,8 @@ export function Step4Export({ config }: Props) {
             </div>
           )}
 
-          {/* Blockchain Info Explorer Panel (Oculto para principiantes) */}
-          {experienceLevel !== "beginner" && selectedExplorerAddr && (
+          {/* Blockchain Info Explorer Panel */}
+          {selectedExplorerAddr && (
             <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/20 p-5 space-y-4 animate-slideUp">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <span className="text-xs uppercase tracking-widest text-[#818cf8] font-mono font-bold flex items-center gap-1.5">
@@ -591,7 +609,11 @@ export function Step4Export({ config }: Props) {
                 JSON
               </Button>
               <Button
-                onClick={downloadPdf}
+                onClick={() => {
+                  setPdfPassword("");
+                  setShowPasswordText(false);
+                  setShowPasswordModal(true);
+                }}
                 className="flex-1 bg-transparent border border-[#6366f1] text-[#818cf8] hover:bg-[#6366f1]/10 font-semibold h-12 text-sm min-w-[150px] rounded-none"
               >
                 <FileText className="w-4 h-4 mr-2" />
@@ -632,6 +654,77 @@ export function Step4Export({ config }: Props) {
                 level="L"
                 className="w-full h-full"
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-[#0c0f1d] border border-[#1e2640] p-6 max-w-md w-full shadow-2xl space-y-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#6366f1]/15 border border-[#6366f1]/30 flex items-center justify-center text-[#818cf8]">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Proteger Respaldo PDF</h3>
+                  <p className="text-xs text-zinc-400">Opcional: Asigna una contraseña para encriptar tu archivo PDF.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-350 block">Contraseña del PDF</label>
+                <div className="relative">
+                  <input
+                    type={showPasswordText ? "text" : "password"}
+                    value={pdfPassword}
+                    onChange={(e) => setPdfPassword(e.target.value)}
+                    placeholder="Escribe una contraseña segura..."
+                    className="w-full bg-[#070913] border border-[#1e2640] px-3.5 py-2.5 text-xs text-white placeholder-zinc-650 focus:outline-none focus:border-[#6366f1] pr-10 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordText(!showPasswordText)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-550 hover:text-zinc-350"
+                  >
+                    {showPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-normal">
+                  * Si asignas una contraseña, se te solicitará cada vez que intentes abrir el archivo PDF para ver el descriptor o las direcciones.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                onClick={() => {
+                  downloadPdf(pdfPassword);
+                  setShowPasswordModal(false);
+                }}
+                disabled={!pdfPassword}
+                className="flex-1 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-semibold text-xs h-10 rounded-none disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Descargar Protegido
+              </Button>
+              <Button
+                onClick={() => {
+                  downloadPdf();
+                  setShowPasswordModal(false);
+                }}
+                className="flex-1 bg-transparent border border-zinc-700 text-zinc-300 hover:bg-zinc-800 font-semibold text-xs h-10 rounded-none"
+              >
+                Descargar sin contraseña
+              </Button>
             </div>
           </div>
         </div>
