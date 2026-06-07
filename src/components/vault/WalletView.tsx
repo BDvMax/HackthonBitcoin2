@@ -290,7 +290,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
               <p className="text-xs text-zinc-500">Gap limit 20 · ruta externa m/0/*</p>
               <p className="text-[10px] font-mono text-zinc-700">{data.addresses.filter(a => a.hasActivity).length} con actividad</p>
             </div>
-            {data.addresses.map(a => <AddrRow key={a.index} addr={a} onCopy={copy} copied={copied} />)}
+            {data.addresses.map(a => <AddrRow key={`${a.chain}-${a.index}`} addr={a} onCopy={copy} copied={copied} />)}
           </div>
         )}
 
@@ -485,7 +485,7 @@ function AddrRow({ addr, onCopy, copied }: { addr: AddressInfo; onCopy: (t: stri
       <div className="flex-1 min-w-0">
         <p className="text-xs font-mono text-zinc-300 truncate">{addr.address}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[9px] text-zinc-600 font-mono">{addr.path}</span>
+          <span className="text-[9px] text-zinc-600 font-mono"> {addr.chain === 0 ? "recibo" : "cambio"} · {addr.path}</span>
           {balance > 0 && <span className="text-[9px] font-mono text-[#818cf8]">{satsToBTC(balance, 6)} BTC</span>}
           {addr.txCount > 0 && balance === 0 && <span className="text-[9px] text-zinc-600">{addr.txCount} tx · vacía</span>}
           {!addr.hasActivity && <span className="text-[9px] text-emerald-700">← disponible</span>}
