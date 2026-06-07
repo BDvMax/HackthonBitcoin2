@@ -155,6 +155,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold leading-none truncate">Bóveda Multisig</p>
+              <p className="text-sm font-bold leading-none truncate">Bóveda</p>
               <p className="text-[10px] font-mono text-zinc-500 mt-0.5 truncate">{config.requiredApprovals}-de-{config.totalDevices} · {networkLabel}</p>
             </div>
           </div>
