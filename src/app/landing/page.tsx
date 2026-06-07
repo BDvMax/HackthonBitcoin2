@@ -23,6 +23,23 @@ const essentials = [
     text: "La app no custodia tus fondos. Te ayuda a organizar tu seguridad sin entregar tus llaves privadas.",
   },
 ];
+const workflow = [
+  {
+    icon: ShieldCheck,
+    title: "Crea una boveda",
+    text: "Define cuantos dispositivos participan y el esquema de firmas que quieres usar.",
+  },
+  {
+    icon: KeyRound,
+    title: "Agrega tus llaves",
+    text: "Importa las llaves publicas de tus wallets para construir la configuracion multifirma.",
+  },
+  {
+    icon: Clock3,
+    title: "Prepara recuperacion",
+    text: "Configura timelock, descriptor y respaldo para volver a entrar si algo falla.",
+  },
+];
 const architecture = [
   {
     figure: "FIG 0.2",
@@ -221,11 +238,11 @@ export default function LandingPage() {
           <RevealText
             as="h2"
             className={styles.sectionTitle}
-            text="Una boveda para evitar que un error termine en perdida."
+            text="Un flujo claro desde la primera llave hasta el respaldo final."
           />
         </div>
         <div className={styles.cards}>
-          {essentials.map((item) => {
+          {workflow.map((item) => {
             const Icon = item.icon;
             return (
               <article className={styles.card} key={item.title}>
