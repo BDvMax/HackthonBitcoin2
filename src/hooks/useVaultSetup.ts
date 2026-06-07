@@ -2,11 +2,6 @@ import { useState } from "react";
 import type { VaultConfig, SetupStep } from "@/lib/types/vault";
 
 const DEFAULT_CONFIG: VaultConfig = {
-  vaultType: "single",
-
-  totalDevices: 1,
-  requiredApprovals: 1,
-
   vaultType: "multi",
   totalDevices: 3,
   requiredApprovals: 2,

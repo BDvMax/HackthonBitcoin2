@@ -66,6 +66,7 @@ export function Step4Export({ config }: Props) {
   const [copiedAddress, setCopiedAddress] = useState<number | null>(null);
   const [showAddresses, setShowAddresses] = useState(true);
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
+  const [showAdvancedText, setShowAdvancedText] = useState(false);
 
   // States for blockchain explorer
   const [loadingAddressInfo, setLoadingAddressInfo] = useState(false);
@@ -91,8 +92,7 @@ export function Step4Export({ config }: Props) {
         config.requiredApprovals,
         config.network,
         5,
-        0,
-      
+        0
       );
       return { descriptor: withChecksum, addresses: addrs, error: "" };
     } catch (error: unknown) {
@@ -191,7 +191,7 @@ export function Step4Export({ config }: Props) {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
     doc.text("KUKUL VAULT", 14, 20);
-    
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
@@ -208,7 +208,7 @@ export function Step4Export({ config }: Props) {
     doc.setTextColor(60, 60, 60);
     doc.text(`Fecha de Creación: ${new Date().toLocaleDateString()}`, 14, 65);
     doc.text(`Esquema Multifirma: ${config.requiredApprovals} de ${config.totalDevices}`, 14, 72);
-    doc.text(`Red: ${config.network === "mainnet" ? "Bitcoin Mainnet" : "Bitcoin Testnet"}`, 14, 79);
+    doc.text(`Red: ${config.network}`, 14, 79);
     doc.text(`Seguro de Emergencia: ${config.timelock.enabled ? "Activado" : "Desactivado"}`, 14, 86);
     if (config.timelock.enabled) {
       doc.text(`Tiempo de Bloqueo: ~ ${blocksToHuman(config.timelock.blocks)}`, 14, 93);
@@ -216,10 +216,10 @@ export function Step4Export({ config }: Props) {
 
     // 3. QR Code
     try {
-      const qrDataUrl = await QRCodeGenerator.toDataURL(descriptor, { 
-        width: 150, 
-        margin: 1, 
-        color: { dark: '#000000FF', light: '#FFFFFFFF' } 
+      const qrDataUrl = await QRCodeGenerator.toDataURL(descriptor, {
+        width: 150,
+        margin: 1,
+        color: { dark: '#000000FF', light: '#FFFFFFFF' }
       });
       doc.addImage(qrDataUrl, "PNG", pageWidth - 65, 45, 50, 50);
       doc.setFontSize(9);
@@ -269,7 +269,7 @@ export function Step4Export({ config }: Props) {
     // 6. Footer
     doc.setDrawColor(200, 200, 200);
     doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(150, 150, 150);
@@ -285,7 +285,7 @@ export function Step4Export({ config }: Props) {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
     doc.text("KUKUL VAULT", 14, 20);
-    
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
@@ -303,14 +303,14 @@ export function Step4Export({ config }: Props) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50, 50, 50);
-    
+
     const instructions = [
       "1. Mantenga este documento en un lugar seguro. El 'Descriptor BIP380' (en la página 1) es todo lo que necesita para restaurar su bóveda en cualquier software compatible con Bitcoin.",
       "2. Necesitará usar sus dispositivos de hardware para firmar y autorizar cualquier retiro.",
       "3. Si activó el Seguro de Emergencia (Timelock), en caso de pérdida, debe esperar el tiempo de bloqueo definido para recuperar los fondos con menos firmas.",
       "4. Puede depositar fondos en cualquiera de las direcciones mostradas a continuación. Son direcciones de contrato exclusivas de su bóveda."
     ];
-    
+
     let currentY = 68;
     instructions.forEach((text) => {
       const lines = doc.splitTextToSize(text, pageWidth - 28);
@@ -319,19 +319,19 @@ export function Step4Export({ config }: Props) {
     });
 
     currentY += 5;
-    
+
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
     doc.text("Direcciones de Depósito", 14, currentY);
-    
+
     currentY += 5;
     doc.setDrawColor(200, 200, 200);
     doc.line(14, currentY, pageWidth - 14, currentY);
     currentY += 8;
 
     const addressesData = addresses.map((a) => [a.path, a.address]);
-    
+
     autoTable(doc, {
       startY: currentY,
       head: [["Derivación", "Dirección"]],
@@ -343,7 +343,7 @@ export function Step4Export({ config }: Props) {
 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(150, 150, 150);
@@ -375,16 +375,16 @@ export function Step4Export({ config }: Props) {
         <>
           {/* Descriptor box */}
           <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/40 p-6 flex flex-col items-center space-y-6 relative">
-            <div 
+            <div
               className="bg-white p-6 rounded-none w-full shadow-sm relative flex justify-center items-center"
             >
               <QRCode value={descriptor} className="w-full max-w-[400px] h-auto" />
             </div>
-            
+
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
-                  {experienceLevel === "beginner" ? "Código de Registro de Bóveda" : "Descriptor BIP380"}
+                  {experienceLevel === "beginner" ? "Código de Seguridad de Bóveda" : "Descriptor BIP380"}
                 </span>
                 <button
                   onClick={copy}
@@ -403,16 +403,30 @@ export function Step4Export({ config }: Props) {
                   )}
                 </button>
               </div>
-              <p className="text-xs font-mono text-zinc-350 break-all bg-zinc-950 p-3 rounded-none-none border border-[#1e2640] leading-relaxed max-h-24 overflow-y-auto">
-                {descriptor}
-              </p>
+              <div className="flex items-center justify-between mt-4">
+                {experienceLevel === "beginner" ? (
+                  <button
+                    onClick={() => setShowAdvancedText((v) => !v)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 font-medium underline underline-offset-2 flex items-center gap-1"
+                  >
+                    {showAdvancedText ? "Ocultar código avanzado" : "Mostrar código avanzado"}
+                  </button>
+                ) : (
+                  <span />
+                )}
+              </div>
+              {(experienceLevel !== "beginner" || showAdvancedText) && (
+                <p className="text-xs font-mono text-zinc-350 break-all bg-zinc-950 p-3 rounded-none-none border border-[#1e2640] leading-relaxed max-h-24 overflow-y-auto">
+                  {descriptor}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Resumen de configuración */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { label: "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
+              { label: experienceLevel === "beginner" ? "Regla de firmas" : "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
               { label: "Red", value: config.network},
               { label: "Seguro", value: config.timelock.enabled ? `Activo (${blocksToHuman(config.timelock.blocks)})` : "Inactivo" },
             ].map((item) => (
@@ -436,8 +450,8 @@ export function Step4Export({ config }: Props) {
             </p>
           </div>
 
-          {/* Direcciones derivadas */}
-          {addresses.length > 0 && (
+          {/* Direcciones derivadas (Oculto para principiantes) */}
+          {experienceLevel !== "beginner" && addresses.length > 0 && (
             <div className="rounded-none-none border border-[#1e2640] bg-zinc-950/40">
               <button
                 onClick={() => setShowAddresses((v) => !v)}
@@ -490,8 +504,8 @@ export function Step4Export({ config }: Props) {
             </div>
           )}
 
-          {/* Blockchain Info Explorer Panel */}
-          {selectedExplorerAddr && (
+          {/* Blockchain Info Explorer Panel (Oculto para principiantes) */}
+          {experienceLevel !== "beginner" && selectedExplorerAddr && (
             <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/20 p-5 space-y-4 animate-slideUp">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <span className="text-xs uppercase tracking-widest text-[#818cf8] font-mono font-bold flex items-center gap-1.5">
@@ -499,9 +513,9 @@ export function Step4Export({ config }: Props) {
                   Estado en Blockchain (Mempool.space)
                 </span>
                 <div className="flex items-center gap-4">
-                  <a 
+                  <a
                     href={`${getMempoolExplorer(config.network)}/address/${selectedExplorerAddr}`}
-                    target="_blank" 
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#818cf8] hover:text-white text-xs font-semibold underline underline-offset-2 flex items-center gap-1"
                   >
@@ -565,7 +579,7 @@ export function Step4Export({ config }: Props) {
           <div className="mt-8 border-t border-zinc-800/80 pt-6">
             <h3 className="text-xl font-bold text-white mb-2 font-mono text-center">Descargas</h3>
             <div className="w-full border-t-2 border-dashed border-zinc-700 mb-6 mt-4"></div>
-            
+
             <div className="flex gap-3 flex-col sm:flex-row flex-wrap">
               <Button
                 onClick={download}
@@ -594,18 +608,18 @@ export function Step4Export({ config }: Props) {
       )}
       {/* Fullscreen QR Modal */}
       {showFullscreenQR && (
-        <div 
+        <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#070913] animate-scaleIn"
           onClick={() => setShowFullscreenQR(false)}
         >
-          <button 
+          <button
             className="absolute top-6 right-6 text-zinc-400 hover:text-white transition-colors bg-zinc-900/50 p-3 rounded-none hover:bg-zinc-800"
             onClick={() => setShowFullscreenQR(false)}
           >
             <X className="w-8 h-8" />
           </button>
-          
-          <div 
+
+          <div
             className="w-full h-full flex items-center justify-center p-8 sm:p-12 md:p-24"
             onClick={e => e.stopPropagation()}
           >
