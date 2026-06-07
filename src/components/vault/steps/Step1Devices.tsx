@@ -24,7 +24,6 @@ export function Step1Devices({ config, onChange }: Props) {
 
   const isMulti = vaultType === "multi";
 
-  // Clamp helpers
   const setTotal = (n: number) => {
     const clamped = Math.max(2, Math.min(15, n));
     onChange({
@@ -36,6 +35,29 @@ export function Step1Devices({ config, onChange }: Props) {
   const setApprovals = (n: number) => {
     const clamped = Math.max(1, Math.min(totalDevices, n));
     onChange({ requiredApprovals: clamped });
+  };
+
+  // FIX: al cambiar a "single" se resetean totalDevices y requiredApprovals a 1
+  // para que el sidebar quede sincronizado.
+  const handleVaultTypeChange = (type: "single" | "multi") => {
+    if (type === "single") {
+      onChange({
+        vaultType: "single",
+        totalDevices: 1,
+        requiredApprovals: 1,
+        // Limpiar llaves para que el usuario no arrastre llaves multisig
+        keys: [],
+      });
+    } else {
+      const newTotal = Math.max(totalDevices, 2);
+      const newApprovals = Math.max(1, Math.min(requiredApprovals, newTotal - 1));
+      onChange({
+        vaultType: "multi",
+        totalDevices: newTotal,
+        requiredApprovals: newApprovals,
+        keys: [],
+      });
+    }
   };
 
   return (
@@ -54,7 +76,7 @@ export function Step1Devices({ config, onChange }: Props) {
         </p>
       </div>
 
-      {/* ── Selector de tipo de bóveda ─────────────────────────────────────── */}
+      {/* Selector de tipo de bóveda */}
       <div className="space-y-3">
         <label className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
           Tipo de Bóveda
@@ -62,7 +84,7 @@ export function Step1Devices({ config, onChange }: Props) {
         <div className="grid grid-cols-2 gap-3">
           {/* Single Sig */}
           <button
-            onClick={() => onChange({ vaultType: "single" })}
+            onClick={() => handleVaultTypeChange("single")}
             className={cn(
               "p-4 rounded-xl border text-left transition-all duration-300 flex flex-col gap-2",
               !isMulti
@@ -71,19 +93,22 @@ export function Step1Devices({ config, onChange }: Props) {
             )}
           >
             <div className="flex items-center gap-2">
-              <Shield className={cn("w-5 h-5", !isMulti ? "text-[#818cf8]" : "text-zinc-500")} />
-              <span className={cn("text-sm font-bold", !isMulti ? "text-[#818cf8]" : "text-white")}>
+              <Shield className={cn("w-4 h-4 shrink-0", !isMulti ? "text-[#818cf8]" : "text-zinc-600")} />
+              <span className={cn("text-[10px] font-mono uppercase tracking-wider", !isMulti ? "text-[#818cf8]" : "text-zinc-500")}>
                 Single Sig
               </span>
             </div>
+            <span className={cn("text-base font-bold leading-snug", !isMulti ? "text-white" : "text-zinc-400")}>
+              Una sola firma
+            </span>
             <span className="text-[11px] text-zinc-500 leading-snug">
-              Una sola firma · BIP84 (P2WPKH) · Más simple
+              BIP84 (P2WPKH) · Más simple
             </span>
           </button>
 
           {/* Multi Sig */}
           <button
-            onClick={() => onChange({ vaultType: "multi" })}
+            onClick={() => handleVaultTypeChange("multi")}
             className={cn(
               "p-4 rounded-xl border text-left transition-all duration-300 flex flex-col gap-2",
               isMulti
@@ -92,19 +117,22 @@ export function Step1Devices({ config, onChange }: Props) {
             )}
           >
             <div className="flex items-center gap-2">
-              <Lock className={cn("w-5 h-5", isMulti ? "text-[#818cf8]" : "text-zinc-500")} />
-              <span className={cn("text-sm font-bold", isMulti ? "text-[#818cf8]" : "text-white")}>
+              <Lock className={cn("w-4 h-4 shrink-0", isMulti ? "text-[#818cf8]" : "text-zinc-600")} />
+              <span className={cn("text-[10px] font-mono uppercase tracking-wider", isMulti ? "text-[#818cf8]" : "text-zinc-500")}>
                 Multi Sig
               </span>
             </div>
+            <span className={cn("text-base font-bold leading-snug", isMulti ? "text-white" : "text-zinc-400")}>
+              Múltiples firmas
+            </span>
             <span className="text-[11px] text-zinc-500 leading-snug">
-              Múltiples firmas · BIP48 (P2WSH) · Mayor seguridad
+              BIP48 (P2WSH) · Mayor seguridad
             </span>
           </button>
         </div>
       </div>
 
-      {/* ── Configuración Multi Sig (solo si isMulti) ─────────────────────── */}
+      {/* Configuración Multi Sig */}
       {isMulti && (
         <div className="space-y-6 border border-[#1e2640] bg-[#0d1120]/60 rounded-xl p-5 animate-fadeIn">
           {/* Total de dispositivos */}
@@ -198,7 +226,7 @@ export function Step1Devices({ config, onChange }: Props) {
         </div>
       )}
 
-      {/* ── Selector de Red ───────────────────────────────────────────────── */}
+      {/* Selector de Red */}
       <div className="space-y-3">
         <label className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
           Red de Bitcoin
