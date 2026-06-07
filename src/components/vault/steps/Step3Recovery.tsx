@@ -422,6 +422,9 @@ export function Step3Recovery({ config, onChange }: Props) {
                   update({ trustedKey: { ...timelock.trustedKey!, label } })
                 }
                 onLoadTestKey={loadTestRecoveryKey}
+                onFingerprintChange={(f) =>        // ← agregar esto
+                  update({ trustedKey: { ...timelock.trustedKey!, fingerprint: f } })
+                }
               />
               {timelock.trustedKey?.isValid && (
                 <div className="flex items-center gap-2 text-sm text-emerald-400 font-semibold mt-2">
@@ -722,7 +725,7 @@ function ModeCard({ active, onClick, icon, title, description }: {
   );
 }
 
-function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPathChange, onLabelChange, onLoadTestKey }: {
+function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPathChange, onLabelChange, onLoadTestKey, onFingerprintChange }: {
   entry: XpubEntry | null;
   network: "mainnet" | "testnet" | "signet" | "testnet4";
   experienceLevel: "beginner" | "intermediate" | "advanced";
@@ -730,6 +733,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
   onPathChange: (p: string) => void;
   onLabelChange: (l: string) => void;
   onLoadTestKey: () => void;
+  onFingerprintChange?: (f: string) => void;
 }) {
   const { setActiveHelp, activeHelp } = useWallet();
   const [showPathMenu, setShowPathMenu] = useState(false);
@@ -832,43 +836,62 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
         )}
 
         {showAdvanced && (
-          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900 sm:grid-cols-2">
-            <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
-                <Term name="fingerprint" />
-              </label>
-              <div className="mt-1 px-2 py-1 rounded-none bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 flex items-center">
-                {entry?.fingerprint || <span className="text-zinc-700">--------</span>}
-              </div>
-            </div>
-            <div className="relative">
-              <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
-                <Term name="derivation" />
-              </label>
-              <button
-                onClick={() => setShowPathMenu((v) => !v)}
-                className="mt-1 w-full px-2 py-1 rounded-none border border-zinc-800 bg-zinc-950 text-xs font-mono text-zinc-400 flex items-center justify-between h-7 hover:border-zinc-700 transition-colors"
-              >
-                <span className="truncate">{entry?.derivationPath ?? "m/48'/0'/0'/2'"}</span>
-                <ChevronDown className="w-3 h-3 shrink-0 ml-1" />
-              </button>
-              {showPathMenu && (
-                <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-none border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
-                  {Object.entries(STANDARD_PATHS).map(([label, path]) => (
-                    <button
-                      key={path}
-                      onClick={() => { onPathChange(path); setShowPathMenu(false); }}
-                      className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
-                    >
-                      <div className="text-xs font-bold text-zinc-300">{label}</div>
-                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+  <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900 sm:grid-cols-2">
+    {/* Fingerprint editable */}
+    <div>
+      <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
+        <Term name="fingerprint" />
+      </label>
+      <input
+        type="text"
+        maxLength={8}
+        spellCheck={false}
+        placeholder="--------"
+        value={entry?.fingerprint ?? ""}
+        onChange={(e) => onFingerprintChange?.(e.target.value.toLowerCase())}
+        className="mt-1 w-full px-2 py-1 rounded-none bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors placeholder:text-zinc-700"
+      />
+    </div>
+
+    {/* Derivation Path: input libre + dropdown de rutas estándar */}
+    <div className="relative">
+      <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
+        <Term name="derivation" />
+      </label>
+      <div className="flex gap-1 mt-1">
+        <input
+          type="text"
+          spellCheck={false}
+          value={entry?.derivationPath ?? "m/48'/0'/0'/2'"}
+          onChange={(e) => onPathChange(e.target.value)}
+          className="flex-1 min-w-0 px-2 py-1 rounded-none border border-zinc-800 bg-zinc-950 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors"
+          placeholder="m/48'/0'/0'/2'"
+        />
+        <button
+          onClick={() => setShowPathMenu((v) => !v)}
+          className="px-1.5 h-7 rounded-none border border-zinc-800 bg-zinc-950 hover:border-zinc-700 transition-colors shrink-0"
+          title="Rutas estándar"
+        >
+          <ChevronDown className={cn("w-3 h-3 text-zinc-400 transition-transform duration-200", showPathMenu && "rotate-180")} />
+        </button>
+      </div>
+      {showPathMenu && (
+        <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-none border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
+          {Object.entries(STANDARD_PATHS).map(([label, path]) => (
+            <button
+              key={path}
+              onClick={() => { onPathChange(path); setShowPathMenu(false); }}
+              className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
+            >
+              <div className="text-xs font-bold text-zinc-300">{label}</div>
+              <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
