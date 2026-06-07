@@ -3,52 +3,120 @@ import { BIP32Factory } from "bip32";
 import * as ecc from "tiny-secp256k1";
 
 const bip32 = BIP32Factory(ecc);
-// inputValue
+
+export const SIGNET_NETWORK = {
+  messagePrefix: '\x18Bitcoin Signed Message:\n',
+  bech32: 'tb',
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+export function getBitcoinNetwork(network: "mainnet" | "testnet" | "signet" | "testnet4") {
+  switch (network) {
+    case "mainnet":  return bitcoin.networks.bitcoin;
+    case "testnet":
+    case "testnet4": return bitcoin.networks.testnet;
+    case "signet":   return SIGNET_NETWORK;
+    default:         return bitcoin.networks.bitcoin;
+  }
+}
+
+// ── Prefijos de red esperados ────────────────────────────────────────────────
+// xpub/xprv = mainnet, tpub/tprv = testnet/signet/testnet4
+const MAINNET_PREFIXES = ["xpub", "xprv", "zpub", "zprv", "Zpub", "Zprv"];
+const TESTNET_PREFIXES = ["tpub", "tprv", "upub", "uprv", "Upub", "Uprv"];
+
+export function detectKeyNetwork(raw: string): "mainnet" | "testnet" | "unknown" {
+  const prefix = raw.trim().slice(0, 4);
+  if (MAINNET_PREFIXES.some((p) => raw.trim().startsWith(p))) return "mainnet";
+  if (TESTNET_PREFIXES.some((p) => raw.trim().startsWith(p))) return "testnet";
+  return "unknown";
+}
+
+export function isKeyCompatibleWithNetwork(
+  raw: string,
+  network: "mainnet" | "testnet" | "signet" | "testnet4"
+): boolean {
+  const keyNet = detectKeyNetwork(raw);
+  if (keyNet === "unknown") return false;
+  if (network === "mainnet") return keyNet === "mainnet";
+  // testnet, testnet4, signet todos usan tpub
+  return keyNet === "testnet";
+}
+
+// ── Ruta por defecto según red y tipo de bóveda ──────────────────────────────
+export function getDefaultDerivationPath(
+  network: "mainnet" | "testnet" | "signet" | "testnet4",
+  vaultType: "single" | "multi"
+): string {
+  const coin = network === "mainnet" ? "0" : "1";
+  if (vaultType === "single") return `m/84'/${coin}'/0'`;
+  return `m/48'/${coin}'/0'/2'`;
+}
+
 export interface ParsedXpub {
   xpub: string;
-  fingerprint: string;       // 4 bytes hex del master key parent
-  derivationPath: string;    // ej: m/48'/0'/0'/2'
+  fingerprint: string;
+  derivationPath: string;
   depth: number;
   isValid: boolean;
+  networkMismatch?: boolean; // nueva bandera
   error?: string;
 }
 
-// Paths estándar para multisig (BIP48 nativo segwit = type 2)
 export const STANDARD_PATHS: Record<string, string> = {
-  "P2WSH (Nativo SegWit)":  "m/48'/0'/0'/2'",
-  "P2SH-P2WSH (Compatible)": "m/48'/0'/0'/1'",
-  "P2SH (Legacy)":           "m/45'",
+  "P2WSH (Nativo SegWit)":    "m/48'/0'/0'/2'",
+  "P2SH-P2WSH (Compatible)":  "m/48'/0'/0'/1'",
+  "P2SH (Legacy)":             "m/45'",
 };
 
 export const TESTNET_PATHS: Record<string, string> = {
-  "P2WSH (Nativo SegWit)":  "m/48'/1'/0'/2'",
-  "P2SH-P2WSH (Compatible)": "m/48'/1'/0'/1'",
+  "P2WSH (Nativo SegWit)":    "m/48'/1'/0'/2'",
+  "P2SH-P2WSH (Compatible)":  "m/48'/1'/0'/1'",
 };
 
 export function parseXpub(
   raw: string,
-  network: "mainnet" | "testnet" = "mainnet"
+  network: "mainnet" | "testnet" | "signet" | "testnet4" = "mainnet"
 ): ParsedXpub {
-  const net = network === "testnet"
-    ? bitcoin.networks.testnet
-    : bitcoin.networks.bitcoin;
+  const trimmed = raw.trim();
+
+  // Verificar compatibilidad de red antes de intentar parsear
+  if (!isKeyCompatibleWithNetwork(trimmed, network)) {
+    const keyNet = detectKeyNetwork(trimmed);
+    return {
+      xpub: trimmed,
+      fingerprint: "",
+      derivationPath: "",
+      depth: 0,
+      isValid: false,
+      networkMismatch: keyNet !== "unknown",
+      error: keyNet !== "unknown"
+        ? `Esta llave es de ${keyNet === "mainnet" ? "Mainnet" : "Testnet"} pero tu bóveda usa ${network}`
+        : "Formato de llave no reconocido",
+    };
+  }
 
   try {
-    const node = bip32.fromBase58(raw.trim(), net);
-
-    // fingerprint del parent (primeros 4 bytes en hex)
+    const net = getBitcoinNetwork(network);
+    const node = bip32.fromBase58(trimmed, net);
     const fp = node.parentFingerprint.toString(16).padStart(8, "0").toUpperCase();
 
     return {
-      xpub: raw.trim(),
+      xpub: trimmed,
       fingerprint: fp,
-      derivationPath: "",   // el usuario lo provee; validamos formato aparte
+      derivationPath: "",
       depth: node.depth,
       isValid: true,
     };
   } catch (e: unknown) {
     return {
-      xpub: raw.trim(),
+      xpub: trimmed,
       fingerprint: "",
       derivationPath: "",
       depth: 0,
@@ -58,12 +126,10 @@ export function parseXpub(
   }
 }
 
-// Valida formato de path: m/48'/0'/0'/2' o m/45'
 export function validateDerivationPath(path: string): boolean {
-  return /^m(\/\d+'?)*$/.test(path.trim());
+  return /^m(\/\d+[h']?)*$/.test(path.trim());
 }
 
-// Shortform para UI: "xpub6ABC...XYZ"
 export function truncateXpub(xpub: string, head = 8, tail = 6): string {
   if (xpub.length <= head + tail) return xpub;
   return `${xpub.slice(0, head)}...${xpub.slice(-tail)}`;

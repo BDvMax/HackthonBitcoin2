@@ -19,11 +19,12 @@ export interface TimelockConfig {
 }
 
 export interface VaultConfig {
+  vaultType: "single" | "multi"; 
   totalDevices: number;
   requiredApprovals: number;
   keys: XpubEntry[];
   timelock: TimelockConfig;
-  network: "mainnet" | "testnet";
+  network: "mainnet" | "testnet" | "signet" | "testnet4";
 }
 
 export type SetupStep = 0 | 1 | 2 | 3 | 4;

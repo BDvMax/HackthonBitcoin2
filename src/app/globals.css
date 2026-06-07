@@ -154,6 +154,11 @@
     to { transform: scale(1); opacity: 1; }
   }
 
+  @keyframes breathe {
+    0%, 100% { opacity: 0.04; }
+    50% { opacity: 0.16; }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
@@ -168,6 +173,10 @@
 
   .animate-scaleIn {
     animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-breathe {
+    animation: breathe 4s ease-in-out infinite;
   }
 
   /* Textures and Visual Effects */

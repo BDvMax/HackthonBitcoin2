@@ -12,8 +12,8 @@ interface TermProps {
 const TERM_DATA = {
   xpub: {
     beginner: {
-      text: "Llave de Lectura",
-      tooltip: null
+      text: "Llave de Lectura (XPUB)",
+      tooltip: "Permite ver fondos y recibir, sin poder gastarlos. Seguro de compartir."
     },
     intermediate: {
       text: "Llave de Lectura (XPUB)",
@@ -26,8 +26,8 @@ const TERM_DATA = {
   },
   fingerprint: {
     beginner: {
-      text: "Identificador Único",
-      tooltip: null
+      text: "Huella Digital (Fingerprint)",
+      tooltip: "Código de 8 caracteres que identifica unívocamente a tu dispositivo físico."
     },
     intermediate: {
       text: "Huella Digital (Fingerprint)",
@@ -40,8 +40,8 @@ const TERM_DATA = {
   },
   derivation: {
     beginner: {
-      text: "Código de Dirección",
-      tooltip: null
+      text: "Ruta de la Llave (Derivation Path)",
+      tooltip: "Ubicación exacta de la llave dentro del chip del dispositivo."
     },
     intermediate: {
       text: "Ruta de la Llave (Derivation Path)",
@@ -54,8 +54,8 @@ const TERM_DATA = {
   },
   timelock: {
     beginner: {
-      text: "Seguro de Retraso de Tiempo",
-      tooltip: null
+      text: "Bloqueo de Emergencia (Timelock)",
+      tooltip: "Seguro (BIP68) que te permite gastar con menos firmas tras un plazo de inactividad."
     },
     intermediate: {
       text: "Bloqueo de Emergencia (Timelock)",
@@ -68,8 +68,8 @@ const TERM_DATA = {
   },
   approvals: {
     beginner: {
-      text: "Aprobadores Necesarios",
-      tooltip: null
+      text: "Firmas Necesarias (Quórum)",
+      tooltip: "Mínimo de firmas requeridas en conjunto para autorizar un gasto."
     },
     intermediate: {
       text: "Firmas Necesarias (Quórum)",
@@ -88,9 +88,9 @@ export function Term({ name, className }: TermProps) {
 
   if (!data) return <span>{name}</span>;
 
-  const current = data[experienceLevel] || data["intermediate"];
+  const current = data[experienceLevel] ?? data["intermediate"];
 
-  if (experienceLevel === "intermediate" && current.tooltip) {
+  if ((experienceLevel === "beginner" || experienceLevel === "intermediate") && current.tooltip) {
     return (
       <EduTooltip content={current.tooltip} className={className}>
         {current.text}

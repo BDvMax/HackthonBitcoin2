@@ -3,19 +3,28 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { VaultConfig, SetupStep } from "@/lib/types/vault";
 
+import { generateDescriptor as genDesc } from "@/lib/bitcoin/descriptor";
+import { deriveWshAddresses } from "@/lib/bitcoin/address";
+
+export type VaultType = "single-sig" | "multisig";
+
 const DEFAULT_CONFIG: VaultConfig = {
-  totalDevices: 3,
-  requiredApprovals: 2,
+  vaultType: "single", 
+  totalDevices: 1,
+  requiredApprovals: 1,
+
   keys: [],
+
   timelock: {
     enabled: true,
     type: "relative",
     blocks: 25920,
-    recoveryMode: null,
+    recoveryMode: "current-keys",
     recoveryApprovals: 1,
     trustedKey: null,
   },
-  network: "testnet",
+
+  network: "signet",
 };
 
 export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
@@ -39,6 +48,8 @@ interface WalletState {
   setExperienceLevel: (level: ExperienceLevel) => void;
   activeHelp: HelpContent | null;
   setActiveHelp: (help: HelpContent | null) => void;
+  tutorialStep: number | null;
+  setTutorialStep: (step: number | null | ((prev: number | null) => number | null)) => void;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -48,6 +59,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<VaultConfig>(DEFAULT_CONFIG);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("intermediate");
   const [activeHelp, setActiveHelp] = useState<HelpContent | null>(null);
+  const [tutorialStep, setTutorialStep] = useState<number | null>(null);
 
   const updateConfig = (patch: Partial<VaultConfig>) =>
     setConfig((prev) => ({ ...prev, ...patch }));
@@ -55,7 +67,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const canAdvance: Record<SetupStep, boolean> = {
     0: true,
     1: config.requiredApprovals <= config.totalDevices,
-    2: config.keys.filter((k) => k.isValid).length === config.totalDevices,
+    2:
+     config.vaultType === "single"
+    ? config.keys.some((k) => k.isValid)
+    : config.keys.filter((k) => k.isValid).length === config.totalDevices,
     3: !config.timelock.enabled || (
       !!config.timelock.recoveryMode && (
         config.timelock.recoveryMode === "current-keys" ||
@@ -66,18 +81,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   // Funciones mockeadas preparadas para BDK o bitcoinerlab
-  const generateDescriptor = () => {
-    // TODO: Reemplazar por implementación real
-    return `wsh(sortedmulti(${config.requiredApprovals},...))`; 
-  };
+  const generateDescriptor = () => genDesc(config);
 
   const deriveAddresses = () => {
-    // TODO: Reemplazar por derivación real BIP32
-    return ["tb1q...", "tb1q..."];
+    const validKeys = config.keys.filter((k) => k.isValid);
+    return deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 5, 0)
+      .map((a) => a.address);
   };
 
   return (
-    <WalletContext.Provider value={{ step, setStep, config, updateConfig, canAdvance, generateDescriptor, deriveAddresses, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp }}>
+    <WalletContext.Provider value={{ step, setStep, config, updateConfig, canAdvance, generateDescriptor, deriveAddresses, experienceLevel, setExperienceLevel, activeHelp, setActiveHelp, tutorialStep, setTutorialStep }}>
       {children}
     </WalletContext.Provider>
   );
