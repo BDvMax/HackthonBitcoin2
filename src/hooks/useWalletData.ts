@@ -81,6 +81,7 @@ export interface AddressInfo extends DerivedAddress {
   utxos: EsploraUtxo[];
   txCount: number;
   hasActivity: boolean;
+  chain: 0 | 1;
 }
 
 export interface WalletData {
@@ -157,7 +158,7 @@ const GAP_LIMIT = 25;
 
 async function scanAddresses(
   base: string,
-  addresses: DerivedAddress[],
+  addresses: (DerivedAddress & { chain: 0 | 1 })[],
   onProgress: (label: string, pct: number) => void
 ): Promise<AddressInfo[]> {
   const results: AddressInfo[] = [];
@@ -352,8 +353,8 @@ export function useWalletData(config: VaultConfig) {
         .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath, fingerprint: k.fingerprint }));
 
       // CORRECCIÓN AQUÍ 
-      const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0);
-      const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1);
+      const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0).map(a => ({ ...a, chain: 0 as const }));
+      const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1).map(a => ({ ...a, chain: 1 as const }));
       const derived = [...receiveAddresses, ...changeAddresses];
 
       setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
