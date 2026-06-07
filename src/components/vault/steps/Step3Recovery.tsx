@@ -8,7 +8,7 @@ import { parseXpub, validateDerivationPath, STANDARD_PATHS } from "@/lib/bitcoin
 import { cn } from "@/lib/utils";
 import {
   Shield, Users, UserPlus, ChevronDown,
-  AlertTriangle, Info, Check, HardDrive, AlertCircle, Sparkles, Settings, HelpCircle, X, Calendar
+  AlertTriangle, Info, Check, HardDrive, AlertCircle, Settings, HelpCircle, X, Calendar
 } from "lucide-react";
 import { Term } from "@/components/ui/Term";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -54,9 +54,8 @@ const TEST_RECOVERY_KEY = {
 export function Step3Recovery({ config, onChange }: Props) {
   const { timelock, requiredApprovals, totalDevices } = config;
   const { experienceLevel } = useWallet();
-  const { playClick, playSuccess, playError, playToggle } = useSoundEffects();
+  const { playSuccess, playError, playToggle } = useSoundEffects();
 
-  // Single Sig: 1-de-1, no tiene sentido auto-recuperación
   const isSingleSig = config.vaultType === "single" || requiredApprovals === 1;
 
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel === "advanced");
@@ -64,7 +63,6 @@ export function Step3Recovery({ config, onChange }: Props) {
   const [customAmount, setCustomAmount] = useState(6);
   const [customUnit, setCustomUnit] = useState<"months" | "years">("months");
 
-  // Sin preselección inicial a menos que ya exista un modo de recuperación seleccionado
   const [selectedPreset, setSelectedPreset] = useState<number | null>(
     timelock.recoveryMode ? (PERIOD_PRESETS.find((p) => p.blocks === timelock.blocks)?.blocks ?? null) : null
   );
@@ -89,32 +87,30 @@ export function Step3Recovery({ config, onChange }: Props) {
   const handleActivate = () => {
     playSuccess();
     if (isSingleSig) {
-      // Single Sig: forzar trusted-person inmediatamente pero borrar el resto
       onChange({
         timelock: {
           enabled: true,
           type: "relative",
-          blocks: 0, // Se usará para forzar que el usuario elija
+          blocks: 0,
           recoveryMode: "trusted-person",
           trustedKey: null,
-          recoveryApprovals: 1
-        }
+          recoveryApprovals: 1,
+        },
       });
       setSelectedPreset(null);
       setCustomPeriod(false);
       setMaxVisibleStep(1);
     } else {
-      // Multisig: borrar todo para que no haya preselección
       onChange({
         timelock: {
           enabled: true,
           type: "relative",
-          blocks: 0, // Sin preselección real de bloques
-          // @ts-ignore - Forzamos undefined/null para que no haya nada preseleccionado
+          blocks: 0,
+          // @ts-ignore
           recoveryMode: null,
           trustedKey: null,
-          recoveryApprovals: Math.max(1, requiredApprovals - 1)
-        }
+          recoveryApprovals: Math.max(1, requiredApprovals - 1),
+        },
       });
       setMaxVisibleStep(1);
       setSelectedPreset(null);
@@ -164,7 +160,6 @@ export function Step3Recovery({ config, onChange }: Props) {
     });
   };
 
-  // ── Helpers de UI para el selector de período ────────────────────────────
   const PeriodSelector = ({ onConfirm }: { onConfirm: () => void }) => (
     <div className="space-y-4">
       <div className="flex gap-2.5 flex-wrap">
@@ -283,7 +278,6 @@ export function Step3Recovery({ config, onChange }: Props) {
 
   return (
     <div className="space-y-8 transition-all duration-300">
-      {/* Header */}
       <div>
         <h2 className="text-3xl font-extrabold text-white">
           {experienceLevel === "beginner" ? "Seguro de Emergencia" : "Plan de Recuperación Criptográfica"}
@@ -295,7 +289,6 @@ export function Step3Recovery({ config, onChange }: Props) {
         </p>
       </div>
 
-      {/* Modal confirmación desactivación */}
       {showDeactivateConfirm && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-[#070913]/60 backdrop-blur-[2px] animate-scaleIn">
           <div className="max-w-[260px] w-full mx-4 rounded-none border border-[#6366f1]/20 bg-[#0a0c14] shadow-2xl p-5 text-center space-y-4">
@@ -330,7 +323,6 @@ export function Step3Recovery({ config, onChange }: Props) {
         </div>
       )}
 
-      {/* Toggle principal */}
       <button
         onClick={() => {
           if (timelock.enabled) {
@@ -380,7 +372,6 @@ export function Step3Recovery({ config, onChange }: Props) {
         </div>
       </button>
 
-      {/* Estado desactivado */}
       {!timelock.enabled && (
         <div className="rounded-none border border-red-500/30 bg-red-950/20 p-5 flex gap-4 items-start animate-slideUp">
           <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
@@ -393,33 +384,22 @@ export function Step3Recovery({ config, onChange }: Props) {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          FLUJO SINGLE SIG — período + XPUB en sección unificada
-          ══════════════════════════════════════════════════════ */}
       {timelock.enabled && isSingleSig && (
         <div className="space-y-6 animate-slideUp">
           <div className="rounded-none border border-[#1e2640] bg-[#0d1120]/60 p-6 space-y-6">
-
-            {/* Aviso explicativo */}
             <div className="flex items-start gap-3 rounded-none border border-[#6366f1]/20 bg-[#6366f1]/5 p-4">
               <Info className="w-4 h-4 text-[#818cf8] shrink-0 mt-0.5" />
               <p className="text-sm text-zinc-300 leading-relaxed">
                 Con Single Sig, si pierdes tu dispositivo no podrás recuperar los fondos por tu cuenta. Tras el período de inactividad, <span className="text-[#a5b4fc] font-semibold">la persona de confianza que registres</span> podrá reclamarlos.
               </p>
             </div>
-
-            {/* Período */}
             <div className="space-y-3">
               <p className="text-sm font-bold text-zinc-200 uppercase tracking-wider font-mono">
                 {experienceLevel === "beginner" ? "¿Tras cuánto tiempo de inactividad se activa?" : "Período de Bloqueo Temporal"}
               </p>
               <PeriodSelector onConfirm={() => {}} />
             </div>
-
-            {/* Divider */}
             <div className="border-t border-[#1e2640]" />
-
-            {/* XPUB de persona de confianza — siempre visible */}
             <div className="space-y-3">
               <p className="text-sm font-bold text-zinc-200 uppercase tracking-wider font-mono">
                 {experienceLevel === "beginner"
@@ -437,27 +417,20 @@ export function Step3Recovery({ config, onChange }: Props) {
                 experienceLevel={experienceLevel}
                 onXpubChange={handleTrustedXpub}
                 onPathChange={handleTrustedPath}
-                onLabelChange={(label) =>
-                  update({ trustedKey: { ...timelock.trustedKey!, label } })
-                }
+                onLabelChange={(label) => update({ trustedKey: { ...timelock.trustedKey!, label } })}
                 onLoadTestKey={loadTestRecoveryKey}
-                onFingerprintChange={(f) =>        // ← agregar esto
-                  update({ trustedKey: { ...timelock.trustedKey!, fingerprint: f } })
-                }
+                onFingerprintChange={(f) => update({ trustedKey: { ...timelock.trustedKey!, fingerprint: f } })}
               />
               {timelock.trustedKey?.isValid && (
                 <div className="flex items-center gap-2 text-sm text-emerald-400 font-semibold mt-2">
                   <Check className="w-4 h-4" />
                   <span>
                     Listo · Tras {blocksToHuman(timelock.blocks)} de inactividad,{" "}
-                    <span className="text-emerald-300">
-                      {timelock.trustedKey.label || "tu persona de confianza"}
-                    </span>{" "}
+                    <span className="text-emerald-300">{timelock.trustedKey.label || "tu persona de confianza"}</span>{" "}
                     podrá reclamar los fondos.
                   </span>
                 </div>
               )}
-              {/* Advertencia si falta el XPUB */}
               {!timelock.trustedKey?.isValid && (
                 <div className="flex items-start gap-2 rounded-none border border-amber-800/40 bg-amber-950/20 px-3 py-2.5 text-xs text-amber-300">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
@@ -469,13 +442,8 @@ export function Step3Recovery({ config, onChange }: Props) {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          FLUJO MULTI SIG — pasos numerados
-          ══════════════════════════════════════════════════════ */}
       {timelock.enabled && !isSingleSig && (
         <div className="space-y-6">
-
-          {/* PASO 1 — Período */}
           <Section
             index={1}
             title={experienceLevel === "beginner"
@@ -490,7 +458,6 @@ export function Step3Recovery({ config, onChange }: Props) {
             />
           </Section>
 
-          {/* PASO 2 — Modo */}
           {maxVisibleStep >= 2 && (
             <div className="animate-slideUp">
               <Section
@@ -508,33 +475,21 @@ export function Step3Recovery({ config, onChange }: Props) {
                       setMaxVisibleStep((prev) => Math.max(prev, 3));
                     }}
                     icon={<Users className="w-6 h-6" />}
-                    title={experienceLevel === "beginner"
-                      ? "Yo mismo con menos dispositivos"
-                      : "Mis llaves con menor quórum"}
-                    description={experienceLevel === "beginner"
-                      ? "Por si pierdes alguna llave principal."
-                      : "Gasta con menos firmas."}
+                    title={experienceLevel === "beginner" ? "Yo mismo con menos dispositivos" : "Mis llaves con menor quórum"}
+                    description={experienceLevel === "beginner" ? "Por si pierdes alguna llave principal." : "Gasta con menos firmas."}
                   />
                   <ModeCard
                     active={timelock.recoveryMode === "trusted-person"}
                     onClick={() => {
                       playToggle();
-                      update({
-                        recoveryMode: "trusted-person",
-                        trustedKey: timelock.trustedKey ?? EMPTY_TRUSTED_KEY(),
-                      });
+                      update({ recoveryMode: "trusted-person", trustedKey: timelock.trustedKey ?? EMPTY_TRUSTED_KEY() });
                       setMaxVisibleStep((prev) => Math.max(prev, 3));
                     }}
                     icon={<UserPlus className="w-6 h-6" />}
-                    title={experienceLevel === "beginner"
-                      ? "Un contacto de confianza"
-                      : "Clave de un tercero de confianza"}
-                    description={experienceLevel === "beginner"
-                      ? "Familiar, abogado, heredero."
-                      : "Asigna una clave externa."}
+                    title={experienceLevel === "beginner" ? "Un contacto de confianza" : "Clave de un tercero de confianza"}
+                    description={experienceLevel === "beginner" ? "Familiar, abogado, heredero." : "Asigna una clave externa."}
                   />
                 </div>
-
                 {!timelock.recoveryMode && (
                   <p className="flex items-center gap-1.5 text-sm text-amber-400 mt-3 font-medium">
                     <Info className="w-4 h-4 shrink-0" />
@@ -545,14 +500,11 @@ export function Step3Recovery({ config, onChange }: Props) {
             </div>
           )}
 
-          {/* PASO 3A — Auto-recuperación (current-keys) */}
           {maxVisibleStep >= 3 && timelock.recoveryMode === "current-keys" && (
             <div className="animate-slideUp">
               <Section
                 index={3}
-                title={experienceLevel === "beginner"
-                  ? "¿Cuántos de tus dispositivos se requerirán?"
-                  : "Nuevo quórum de firmas"}
+                title={experienceLevel === "beginner" ? "¿Cuántos de tus dispositivos se requerirán?" : "Nuevo quórum de firmas"}
               >
                 {sliderHasRange ? (
                   <div className="space-y-4">
@@ -585,22 +537,17 @@ export function Step3Recovery({ config, onChange }: Props) {
                 )}
                 <div className="rounded-none border border-zinc-800 bg-zinc-900/20 px-4 py-3 text-sm text-zinc-400 mt-4 leading-relaxed">
                   Normalmente necesitas <span className="text-white font-semibold">{requiredApprovals} firmas</span>. Tras {blocksToHuman(timelock.blocks)} de inactividad, podrás retirar con solo{" "}
-                  <span className="text-[#818cf8] font-semibold">
-                    {sliderHasRange ? timelock.recoveryApprovals : 1} firma(s)
-                  </span>.
+                  <span className="text-[#818cf8] font-semibold">{sliderHasRange ? timelock.recoveryApprovals : 1} firma(s)</span>.
                 </div>
               </Section>
             </div>
           )}
 
-          {/* PASO 3B — Persona de confianza (trusted-person) */}
           {maxVisibleStep >= 3 && timelock.recoveryMode === "trusted-person" && (
             <div className="animate-slideUp">
               <Section
                 index={3}
-                title={experienceLevel === "beginner"
-                  ? "Registrar al contacto de confianza"
-                  : "Llave del tercero autorizado"}
+                title={experienceLevel === "beginner" ? "Registrar al contacto de confianza" : "Llave del tercero autorizado"}
               >
                 <TrustedKeyInput
                   entry={timelock.trustedKey}
@@ -608,17 +555,13 @@ export function Step3Recovery({ config, onChange }: Props) {
                   experienceLevel={experienceLevel}
                   onXpubChange={handleTrustedXpub}
                   onPathChange={handleTrustedPath}
-                  onLabelChange={(label) =>
-                    update({ trustedKey: { ...timelock.trustedKey!, label } })
-                  }
+                  onLabelChange={(label) => update({ trustedKey: { ...timelock.trustedKey!, label } })}
                   onLoadTestKey={loadTestRecoveryKey}
                 />
                 {timelock.trustedKey?.isValid && (
                   <div className="rounded-none border border-zinc-800 bg-zinc-900/20 px-4 py-3 text-sm text-zinc-400 mt-3 leading-relaxed">
                     Tras {blocksToHuman(timelock.blocks)} de inactividad,{" "}
-                    <span className="text-[#818cf8] font-semibold">
-                      {timelock.trustedKey.label || "tu persona de confianza"}
-                    </span>{" "}
+                    <span className="text-[#818cf8] font-semibold">{timelock.trustedKey.label || "tu persona de confianza"}</span>{" "}
                     podrá reclamar los fondos de forma autónoma.
                   </div>
                 )}
@@ -626,7 +569,6 @@ export function Step3Recovery({ config, onChange }: Props) {
             </div>
           )}
 
-          {/* Configuración avanzada */}
           {maxVisibleStep >= 2 && experienceLevel !== "beginner" && (
             <div className="space-y-3 animate-slideUp">
               <button
@@ -636,7 +578,6 @@ export function Step3Recovery({ config, onChange }: Props) {
                 <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", showAdvanced && "rotate-180")} />
                 Configuración de Parámetros de Cadena
               </button>
-
               {showAdvanced && (
                 <div className="rounded-none border border-zinc-800 bg-[#121626]/20 p-5 space-y-5 transition-all duration-300">
                   <div className="space-y-2">
@@ -655,9 +596,7 @@ export function Step3Recovery({ config, onChange }: Props) {
                               : "border-zinc-800 text-zinc-500 hover:border-zinc-700"
                           )}
                         >
-                          <div className="font-bold text-sm">
-                            {t === "relative" ? "Relativo (Recomendado)" : "Absoluto"}
-                          </div>
+                          <div className="font-bold text-sm">{t === "relative" ? "Relativo (Recomendado)" : "Absoluto"}</div>
                           <div className="text-xs text-zinc-500 mt-1 leading-normal">
                             {t === "relative" ? "BIP68 · Desde la última transacción" : "BIP65 · Altura de bloque estática"}
                           </div>
@@ -696,11 +635,9 @@ export function Step3Recovery({ config, onChange }: Props) {
   );
 }
 
-/* ── Subcomponentes ──────────────────────────────────────────────────────────── */
+/* ── Subcomponentes ─────────────────────────────────────────────────────────── */
 
-function Section({ index, title, children }: {
-  index: number; title: string; children: React.ReactNode;
-}) {
+function Section({ index, title, children }: { index: number; title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -715,17 +652,14 @@ function Section({ index, title, children }: {
 }
 
 function ModeCard({ active, onClick, icon, title, description }: {
-  active: boolean; onClick: () => void;
-  icon: React.ReactNode; title: string; description: string;
+  active: boolean; onClick: () => void; icon: React.ReactNode; title: string; description: string;
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         "rounded-none border p-4 text-left transition-all duration-300 space-y-2 w-full",
-        active
-          ? "border-[#6366f1] bg-[#6366f1]/5"
-          : "border-[#1e2640] bg-[#121626]/40 hover:border-zinc-700"
+        active ? "border-[#6366f1] bg-[#6366f1]/5" : "border-[#1e2640] bg-[#121626]/40 hover:border-zinc-700"
       )}
     >
       <div className={cn(
@@ -735,9 +669,7 @@ function ModeCard({ active, onClick, icon, title, description }: {
         {icon}
       </div>
       <div>
-        <div className={cn("text-sm font-bold transition-colors", active ? "text-white" : "text-zinc-300")}>
-          {title}
-        </div>
+        <div className={cn("text-sm font-bold transition-colors", active ? "text-white" : "text-zinc-300")}>{title}</div>
         <div className="text-xs text-zinc-500 mt-0.5">{description}</div>
       </div>
     </button>
@@ -754,18 +686,15 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
   onLoadTestKey: () => void;
   onFingerprintChange?: (f: string) => void;
 }) {
-  const { setActiveHelp, activeHelp } = useWallet();
+  // FIX: eliminado setActiveHelp/activeHelp/helpTitle/isHelpActive — ahora CSS puro
   const [showPathMenu, setShowPathMenu] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
   const hasXpub = (entry?.xpub ?? "").length > 0;
   const hasError = hasXpub && !entry?.isValid;
 
-  const helpTitle = `Ayuda: ${entry?.label || "Contacto de Confianza"}`;
-  const isHelpActive = activeHelp?.title === helpTitle;
-
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-none border flex flex-col items-stretch transition-all duration-300",
+      "relative rounded-none border flex flex-col items-stretch transition-all duration-300",
       entry?.isValid
         ? "border-emerald-800/60 bg-emerald-950/5"
         : hasError
@@ -773,7 +702,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
         : "border-[#1e2640] bg-[#121626]/40"
     )}>
       <div className="flex-1 p-4 space-y-3">
-        {/* Label + test button */}
+        {/* Label */}
         <div className="flex items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-1">
             <HardDrive className="w-4 h-4 text-zinc-500 shrink-0" />
@@ -792,21 +721,18 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
             <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
               <Term name="xpub" />
             </label>
-            <button
-              type="button"
-              onMouseEnter={(e) =>
-                setActiveHelp({
-                  title: helpTitle,
-                  text: "Pide a tu contacto que abra su billetera Bitcoin, vaya a exportar su Llave Pública Extendida (XPUB) y te comparta el código completo.",
-                  x: e.clientX,
-                  y: e.clientY,
-                })
-              }
-              onMouseLeave={() => setActiveHelp(null)}
-              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5", isHelpActive && "text-[#818cf8]")}
-            >
-              <HelpCircle className="w-4 h-4" />
-            </button>
+            {/* FIX: HelpCircle con tooltip CSS puro, sin setActiveHelp */}
+            <span className="relative group/xpubhelp3">
+              <HelpCircle className="w-4 h-4 text-zinc-500 group-hover/xpubhelp3:text-[#818cf8] transition-colors cursor-help" />
+              <span className="pointer-events-none absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64
+                opacity-0 group-hover/xpubhelp3:opacity-100 translate-y-1 group-hover/xpubhelp3:translate-y-0
+                transition-all duration-150 ease-out">
+                <span className="block bg-[#0a0c14] border-l-[6px] border-l-[#6366f1] border-y border-r border-[#1e2640] rounded-sm shadow-xl px-3 py-2.5">
+                  <span className="block text-xs font-bold text-[#818cf8] mb-1 normal-case tracking-normal font-sans">¿Dónde encuentro el XPUB?</span>
+                  <span className="block text-xs text-zinc-300 leading-relaxed normal-case tracking-normal font-sans">Pide a tu contacto que abra su billetera Bitcoin, vaya a exportar su Llave Pública (XPUB) y te comparta el código completo.</span>
+                </span>
+              </span>
+            </span>
           </div>
           <textarea
             rows={2}
@@ -822,9 +748,7 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
             )}
             value={entry?.xpub ?? ""}
             onChange={(e) => onXpubChange(e.target.value)}
-            placeholder={experienceLevel === "beginner"
-              ? "Pega el código largo de tu contacto aquí..."
-              : "xpub6... o zpub..."}
+            placeholder={experienceLevel === "beginner" ? "Pega el código largo de tu contacto aquí..." : "xpub6... o zpub..."}
           />
         </div>
 
@@ -846,62 +770,59 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
         )}
 
         {showAdvanced && (
-  <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900 sm:grid-cols-2">
-    {/* Fingerprint editable */}
-    <div>
-      <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
-        <Term name="fingerprint" />
-      </label>
-      <input
-        type="text"
-        maxLength={8}
-        spellCheck={false}
-        placeholder="--------"
-        value={entry?.fingerprint ?? ""}
-        onChange={(e) => onFingerprintChange?.(e.target.value.toLowerCase())}
-        className="mt-1 w-full px-2 py-1 rounded-none bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors placeholder:text-zinc-700"
-      />
-    </div>
-
-    {/* Derivation Path: input libre + dropdown de rutas estándar */}
-    <div className="relative">
-      <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
-        <Term name="derivation" />
-      </label>
-      <div className="flex gap-1 mt-1">
-        <input
-          type="text"
-          spellCheck={false}
-          value={entry?.derivationPath ?? "m/48'/0'/0'/2'"}
-          onChange={(e) => onPathChange(e.target.value)}
-          className="flex-1 min-w-0 px-2 py-1 rounded-none border border-zinc-800 bg-zinc-950 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors"
-          placeholder="m/48'/0'/0'/2'"
-        />
-        <button
-          onClick={() => setShowPathMenu((v) => !v)}
-          className="px-1.5 h-7 rounded-none border border-zinc-800 bg-zinc-950 hover:border-zinc-700 transition-colors shrink-0"
-          title="Rutas estándar"
-        >
-          <ChevronDown className={cn("w-3 h-3 text-zinc-400 transition-transform duration-200", showPathMenu && "rotate-180")} />
-        </button>
-      </div>
-      {showPathMenu && (
-        <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-none border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
-          {Object.entries(STANDARD_PATHS).map(([label, path]) => (
-            <button
-              key={path}
-              onClick={() => { onPathChange(path); setShowPathMenu(false); }}
-              className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
-            >
-              <div className="text-xs font-bold text-zinc-300">{label}</div>
-              <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
+          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900 sm:grid-cols-2">
+            <div>
+              <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
+                <Term name="fingerprint" />
+              </label>
+              <input
+                type="text"
+                maxLength={8}
+                spellCheck={false}
+                placeholder="--------"
+                value={entry?.fingerprint ?? ""}
+                onChange={(e) => onFingerprintChange?.(e.target.value.toLowerCase())}
+                className="mt-1 w-full px-2 py-1 rounded-none bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors placeholder:text-zinc-700"
+              />
+            </div>
+            <div className="relative">
+              <label className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
+                <Term name="derivation" />
+              </label>
+              <div className="flex gap-1 mt-1">
+                <input
+                  type="text"
+                  spellCheck={false}
+                  value={entry?.derivationPath ?? "m/48'/0'/0'/2'"}
+                  onChange={(e) => onPathChange(e.target.value)}
+                  className="flex-1 min-w-0 px-2 py-1 rounded-none border border-zinc-800 bg-zinc-950 text-xs font-mono text-zinc-400 h-7 outline-none focus:border-[#6366f1]/60 transition-colors"
+                  placeholder="m/48'/0'/0'/2'"
+                />
+                <button
+                  onClick={() => setShowPathMenu((v) => !v)}
+                  className="px-1.5 h-7 rounded-none border border-zinc-800 bg-zinc-950 hover:border-zinc-700 transition-colors shrink-0"
+                  title="Rutas estándar"
+                >
+                  <ChevronDown className={cn("w-3 h-3 text-zinc-400 transition-transform duration-200", showPathMenu && "rotate-180")} />
+                </button>
+              </div>
+              {showPathMenu && (
+                <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-none border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
+                  {Object.entries(STANDARD_PATHS).map(([label, path]) => (
+                    <button
+                      key={path}
+                      onClick={() => { onPathChange(path); setShowPathMenu(false); }}
+                      className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
+                    >
+                      <div className="text-xs font-bold text-zinc-300">{label}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
