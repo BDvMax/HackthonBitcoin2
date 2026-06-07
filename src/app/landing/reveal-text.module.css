@@ -1,0 +1,35 @@
+.revealText {
+  visibility: visible;
+}
+
+.wordMask {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+  line-height: 1.12;
+  vertical-align: top;
+}
+
+.wordMask:not(:last-child) {
+  margin-right: 0.22em;
+}
+
+.word {
+  display: inline-block;
+  transform: translateY(112%);
+  transition: transform 950ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--delay);
+  will-change: transform;
+}
+
+.isRevealed .word {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word {
+    transform: translateY(0);
+    transition: none;
+  }
+}
