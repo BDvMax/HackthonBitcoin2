@@ -6,11 +6,16 @@ import type { VaultConfig, SetupStep } from "@/lib/types/vault";
 import { generateDescriptor as genDesc } from "@/lib/bitcoin/descriptor";
 import { deriveWshAddresses } from "@/lib/bitcoin/address";
 
+export type VaultType = "single-sig" | "multisig";
 
 const DEFAULT_CONFIG: VaultConfig = {
-  totalDevices: 3,
-  requiredApprovals: 2,
+  vaultType: "single-sig",
+
+  totalDevices: 1,
+  requiredApprovals: 1,
+
   keys: [],
+
   timelock: {
     enabled: true,
     type: "relative",
@@ -19,6 +24,7 @@ const DEFAULT_CONFIG: VaultConfig = {
     recoveryApprovals: 1,
     trustedKey: null,
   },
+
   network: "signet",
 };
 
@@ -59,7 +65,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const canAdvance: Record<SetupStep, boolean> = {
     0: true,
     1: config.requiredApprovals <= config.totalDevices,
-    2: config.keys.filter((k) => k.isValid).length === config.totalDevices,
+    2:
+     config.vaultType === "single-sig"
+    ? config.keys.some((k) => k.isValid)
+    : config.keys.filter((k) => k.isValid).length === config.totalDevices,
     3: !config.timelock.enabled || (
       !!config.timelock.recoveryMode && (
         config.timelock.recoveryMode === "current-keys" ||

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { VaultConfig, XpubEntry } from "@/lib/types/vault";
 import { useWallet } from "@/context/WalletContext";
 import {
@@ -30,11 +30,11 @@ import {
   RefreshCw,
   ChevronRight,
   Lock,
-  Unlock,
   GitBranch,
   Hash,
   ArrowDown,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { Term } from "@/components/ui/Term";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -44,12 +44,10 @@ import * as ecc from "tiny-secp256k1";
 
 const bip32 = BIP32Factory(ecc);
 
-// ── BIP39 wordlist (2048 palabras) ───────────────────────────────────────────
-// Wordlist completa embebida para no depender de imports dinámicos
+// ── BIP39 wordlist ────────────────────────────────────────────────────────────
 const BIP39_WORDLIST = `abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone book boost border boring borrow boss bottom bounce box boy bracket brain brand brave breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact endless endorse enemy engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude exercise exhaust exhibit exile exist exit exotic expand expect experience expose express extend extra eye fable face faculty fade faint faith fall false fame family famous fan fancy fantasy far fashion fat fatal father fatigue fault favorite feature february federal fee feed feel feet fellow felt fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost girl ginger giraffe girl give glacier glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grasp grass gravity great green grid grief grit grocery group grow grunt guard guide guilt guitar gun gym habit hair half hamster hand happy harbor harsh hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn hospital host hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon ignore ill illegal image imitate immense immune impact impose improve impulse inbox income increase index indicate indoor industry infant inflict inform inhale inject inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab ladder lady lake lamp language laptop large later laugh laundry lava law lawn lawsuit layer lazy leader learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid main major make mammal mango mansion manual maple marble march margin marine market marriage mask master match maze meadow mean medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle miss mixed mixture mobile model modify mom monitor monkey monster month moon moral more morning mosquito mother motion mound mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery naive name napkin narrow nasty nature near neck need negative neglect neither nephew nerve nest network news next nice night noble noise nominee noodle normal north notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain ocean october odor off offer office often oil okay old olive olympic omit once onion open oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outside oval over own oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patrol pause pave payment peace peanut peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony popular portion position possible post potato poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punish pupil purchase purity push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rage rail rain raise rally ramp ranch random range rapid rare rate rather raven reach ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm ribbon rice rich ride rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy siege sight signal silent silk silly silver similar simple since sing siren sister situate six size sketch skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry soul sound soup source south space spare spatial spawn speak special speed sphere spice spider spike spin spirit split spoil sponsor spoon spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stop store stream street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise sustain swallow swamp swap swear sweet swift swim swing switch sword symbol symptom syrup table tackle tag tail talent tamper tank tape target task tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tilt timber time tiny tip tired title toast tobacco today toggle toilet token tomato tomorrow tone tongue tonight tool tooth top topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck truly trumpet trust truth tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban usable used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture verb verify version very vest viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel web wedding weekend weird welcome well west wet what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word world worry worth wrap wreck wrestle wrist write wrong yard year yellow yield you young youth zebra zero zone zoo`.split(" ");
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
-
 interface GeneratedKeyData {
   mnemonic: string;
   xprv: string;
@@ -58,8 +56,6 @@ interface GeneratedKeyData {
   derivationPath: string;
   network: string;
 }
-
-// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
   config: VaultConfig;
@@ -99,18 +95,13 @@ const TEST_KEYS = [
 // ══════════════════════════════════════════════════════════════════════════════
 
 function hexToBin(hex: string): string {
-  return hex
-    .split("")
-    .map((h) => parseInt(h, 16).toString(2).padStart(4, "0"))
-    .join("");
+  return hex.split("").map((h) => parseInt(h, 16).toString(2).padStart(4, "0")).join("");
 }
 
 async function sha256Hex(hex: string): Promise<string> {
   const bytes = new Uint8Array(hex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
   const buf = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function entropyToMnemonic(entropyHex: string): Promise<string> {
@@ -134,32 +125,24 @@ async function mnemonicToSeed(mnemonic: string, passphrase = ""): Promise<Uint8A
   return new Uint8Array(bits);
 }
 
-/**
- * Genera xprv / xpub / fingerprint a partir de la seed usando bip32 de bitcoinjs.
- * Devuelve la clave derivada en la ruta de cuenta estándar.
- */
 function deriveKeys(
   seedBytes: Uint8Array,
   network: "mainnet" | "testnet" | "signet" | "testnet4",
-  walletType: "single" | "multi"
+  vaultType: "single" | "multi"
 ): { xprv: string; xpub: string; fingerprint: string; derivationPath: string } {
   const net = getBitcoinNetwork(network);
   const root = bip32.fromSeed(Buffer.from(seedBytes), net);
-
-  // Fingerprint del nodo raíz
-  const masterFp = root.fingerprint.toString("hex").toUpperCase().padStart(8, "0");
-
-  // Ruta de cuenta
+  const masterFp = Array.from(root.fingerprint)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
   const cointype = network === "mainnet" ? 0 : 1;
-  const purpose = walletType === "multi" ? 48 : 84;
-  const scriptType = walletType === "multi" ? 2 : undefined; // P2WSH = 2
-
+  const purpose = vaultType === "multi" ? 48 : 84;
+  const scriptType = vaultType === "multi" ? 2 : undefined;
   const pathSegments = scriptType !== undefined
     ? `m/${purpose}'/${cointype}'/0'/${scriptType}'`
     : `m/${purpose}'/${cointype}'/0'`;
-
   const accountNode = root.derivePath(pathSegments);
-
   return {
     xprv: accountNode.toBase58(),
     xpub: accountNode.neutered().toBase58(),
@@ -169,17 +152,16 @@ function deriveKeys(
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Componente principal Step2Keys
+// Step2Keys
 // ══════════════════════════════════════════════════════════════════════════════
 
 export function Step2Keys({ config, onChange }: Props) {
-  const { totalDevices, keys, network } = config;
+  const { totalDevices, keys, network, vaultType } = config;
   const { experienceLevel } = useWallet();
   const { playClick, playSuccess, playError } = useSoundEffects();
 
-  // ── Sección de generación de llaves ──────────────────────────────────────
+  // ── Sección keygen ────────────────────────────────────────────────────────
   const [keygenOpen, setKeygenOpen] = useState(false);
-  const [keygenWalletType, setKeygenWalletType] = useState<"single" | "multi">("multi");
   const [keygenWordCount, setKeygenWordCount] = useState<12 | 24>(24);
   const [keygenPassphrase, setKeygenPassphrase] = useState("");
   const [showPassphrase, setShowPassphrase] = useState(false);
@@ -187,11 +169,12 @@ export function Step2Keys({ config, onChange }: Props) {
   const [generatedKey, setGeneratedKey] = useState<GeneratedKeyData | null>(null);
   const [mnemonic, setMnemonic] = useState<string[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [keygenStep, setKeygenStep] = useState<"config" | "generate" | "result">("config");
+  const [keygenStep, setKeygenStep] = useState<"generate" | "result">("generate");
   const [showMnemonic, setShowMnemonic] = useState(false);
 
-  // ── Sección de importación de xpubs ──────────────────────────────────────
-  const entries: XpubEntry[] = Array.from({ length: totalDevices }, (_, i) => keys[i] ?? EMPTY_KEY(i));
+  // ── Slots de xpub — single sig siempre usa 1 slot ────────────────────────
+  const slotCount = vaultType === "single" ? 1 : totalDevices;
+  const entries: XpubEntry[] = Array.from({ length: slotCount }, (_, i) => keys[i] ?? EMPTY_KEY(i));
   const [showPathDropdown, setShowPathDropdown] = useState<string | null>(null);
 
   const updateEntry = useCallback(
@@ -211,11 +194,17 @@ export function Step2Keys({ config, onChange }: Props) {
   );
 
   const handleXpubChange = (id: string, raw: string) => {
+    // Limpiar espacios/saltos de línea que pueden aparecer al pegar
+    const cleaned = raw.trim().replace(/\s+/g, "");
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
-    const parsed = parseXpub(raw, network);
+    const parsed = parseXpub(cleaned, network);
     const fp = parsed.fingerprint || entry.fingerprint || "";
-    updateEntry(id, { xpub: raw, fingerprint: fp, isValid: validateKeyEntry(raw, fp, entry.derivationPath) });
+    updateEntry(id, {
+      xpub: cleaned,
+      fingerprint: fp,
+      isValid: validateKeyEntry(cleaned, fp, entry.derivationPath),
+    });
   };
 
   const handleFingerprintChange = (id: string, fp: string) => {
@@ -243,36 +232,21 @@ export function Step2Keys({ config, onChange }: Props) {
   };
 
   // ── Generación BIP39 ──────────────────────────────────────────────────────
-
   const handleGenerate = async () => {
     setGenerating(true);
     playClick();
     try {
-      // Entropía aleatoria
       const bytes = keygenWordCount === 24 ? 32 : 16;
       const entropy = new Uint8Array(bytes);
       crypto.getRandomValues(entropy);
-      const entropyHex = Array.from(entropy)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      // Mnemónico
+      const entropyHex = Array.from(entropy).map((b) => b.toString(16).padStart(2, "0")).join("");
       const mnemonicStr = await entropyToMnemonic(entropyHex);
       const wordList = mnemonicStr.split(" ");
-
-      // Seed → claves
       const seedBytes = await mnemonicToSeed(mnemonicStr, keygenPassphrase);
-      const { xprv, xpub, fingerprint, derivationPath } = deriveKeys(seedBytes, network, keygenWalletType);
-
+      // Usa el vaultType del config global (single/multi) en vez de un estado interno
+      const { xprv, xpub, fingerprint, derivationPath } = deriveKeys(seedBytes, network, vaultType ?? "multi");
       setMnemonic(wordList);
-      setGeneratedKey({
-        mnemonic: mnemonicStr,
-        xprv,
-        xpub,
-        fingerprint,
-        derivationPath,
-        network,
-      });
+      setGeneratedKey({ mnemonic: mnemonicStr, xprv, xpub, fingerprint, derivationPath, network });
       setKeygenStep("result");
       playSuccess();
     } catch (err) {
@@ -283,13 +257,19 @@ export function Step2Keys({ config, onChange }: Props) {
     }
   };
 
-  const handleUseKey = () => {
+  // FIX: ya no cierra el panel; permite usar la xpub en el slot y seguir en el generador
+  const handleUseKey = (targetId?: string) => {
     if (!generatedKey) return;
-    // Buscar el primer slot vacío
-    const firstEmpty = entries.findIndex((e) => !e.xpub);
-    const targetId = firstEmpty >= 0 ? entries[firstEmpty].id : entries[entries.length - 1].id;
 
-    updateEntry(targetId, {
+    // Determinar el slot destino
+    let resolvedId = targetId;
+    if (!resolvedId) {
+      const firstEmpty = entries.findIndex((e) => !e.xpub || !e.xpub.trim());
+      resolvedId = firstEmpty >= 0 ? entries[firstEmpty].id : entries[entries.length - 1].id;
+    }
+
+    // Actualizar el slot con la xpub tal como viene del generador (sin limpiar, ya es correcta)
+    updateEntry(resolvedId, {
       xpub: generatedKey.xpub,
       fingerprint: generatedKey.fingerprint,
       derivationPath: generatedKey.derivationPath,
@@ -297,12 +277,20 @@ export function Step2Keys({ config, onChange }: Props) {
       label: `Llave generada (${network})`,
     });
 
-    // Cerrar keygen y volver arriba
-    setKeygenOpen(false);
-    setKeygenStep("config");
+    playSuccess();
+    // NO cerramos el panel; volvemos a "generate" para poder crear otra llave
+    setKeygenStep("generate");
     setGeneratedKey(null);
     setMnemonic([]);
-    playSuccess();
+    setShowMnemonic(false);
+  };
+
+  const handleCloseKeygen = () => {
+    setKeygenOpen(false);
+    setKeygenStep("generate");
+    setGeneratedKey(null);
+    setMnemonic([]);
+    setShowMnemonic(false);
   };
 
   const copyToClipboard = async (text: string, field: string) => {
@@ -314,16 +302,23 @@ export function Step2Keys({ config, onChange }: Props) {
   const validCount = entries.filter((e) => e.isValid).length;
 
   // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <div className="space-y-6 transition-all duration-300">
       {/* Header */}
       <div>
         <h2 className="text-3xl font-extrabold text-white">
-          {experienceLevel === "beginner" ? "Registra tus dispositivos" : "Vincula tus llaves criptográficas"}
+          {vaultType === "single"
+            ? "Vincula tu llave"
+            : experienceLevel === "beginner"
+            ? "Registra tus dispositivos"
+            : "Vincula tus llaves criptográficas"}
         </h2>
         <p className="text-base text-zinc-400 mt-3 leading-relaxed">
-          {experienceLevel === "beginner" ? (
+          {vaultType === "single" ? (
+            <span>
+              Pega la <Term name="xpub" /> de tu dispositivo para configurar tu bóveda single sig.
+            </span>
+          ) : experienceLevel === "beginner" ? (
             "Conecta tus llaves. Pega el código de lectura de cada dispositivo para continuar."
           ) : (
             <span>
@@ -333,14 +328,13 @@ export function Step2Keys({ config, onChange }: Props) {
         </p>
       </div>
 
-      {/* ── Sección: Generar nueva llave ─────────────────────────────────── */}
+      {/* ── Generador de llave BIP39 ──────────────────────────────────────── */}
       <div className="border border-[#1e2640] bg-[#0d1120]/60 rounded-none overflow-hidden">
-        {/* Cabecera colapsable */}
+        {/* Cabecera */}
         <button
           onClick={() => {
             playClick();
             setKeygenOpen((v) => !v);
-            if (!keygenOpen) setKeygenStep("config");
           }}
           className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#141928]/80 transition-colors"
         >
@@ -360,49 +354,12 @@ export function Step2Keys({ config, onChange }: Props) {
           />
         </button>
 
-        {/* Contenido expandido */}
+        {/* Contenido */}
         {keygenOpen && (
           <div className="border-t border-[#1e2640]">
-            {/* ── Paso: Configuración ─────────────────────────────────── */}
-            {keygenStep === "config" && (
+            {/* ── Paso: Generar ─────────────────────────────────────────── */}
+            {keygenStep === "generate" && (
               <div className="p-5 space-y-5">
-                {/* Tipo de wallet */}
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-3">
-                    Tipo de llave
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["single", "multi"] as const).map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setKeygenWalletType(type)}
-                        className={cn(
-                          "flex flex-col items-start gap-1.5 p-4 border rounded-none transition-all duration-200",
-                          keygenWalletType === type
-                            ? "border-[#6366f1] bg-[#6366f1]/10 text-white"
-                            : "border-[#1e2640] bg-[#0d1120] text-zinc-400 hover:border-zinc-700"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {type === "single" ? (
-                            <Unlock className="w-4 h-4 text-[#818cf8]" />
-                          ) : (
-                            <Lock className="w-4 h-4 text-[#818cf8]" />
-                          )}
-                          <span className="text-sm font-bold">
-                            {type === "single" ? "Single Sig" : "Multi Sig"}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-zinc-500 text-left leading-tight">
-                          {type === "single"
-                            ? "Una firma · BIP84 (P2WPKH)"
-                            : "Múltiples firmas · BIP48 (P2WSH)"}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Longitud de semilla */}
                 <div>
                   <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-3">
@@ -432,7 +389,8 @@ export function Step2Keys({ config, onChange }: Props) {
                 {/* Passphrase */}
                 <div>
                   <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-2">
-                    Passphrase BIP39 <span className="text-zinc-600 normal-case">(opcional)</span>
+                    Passphrase BIP39{" "}
+                    <span className="text-zinc-600 normal-case">(opcional)</span>
                   </p>
                   <div className="relative">
                     <input
@@ -452,31 +410,22 @@ export function Step2Keys({ config, onChange }: Props) {
                   </div>
                 </div>
 
-                {/* Red (informativa) */}
+                {/* Info de red y ruta */}
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-[#6366f1]/5 border border-[#6366f1]/20 rounded-none">
                   <GitBranch className="w-4 h-4 text-[#818cf8] shrink-0" />
                   <p className="text-xs text-zinc-400">
-                    Se derivará para{" "}
-                    <span className="text-white font-semibold">{network}</span> ·{" "}
-                    {keygenWalletType === "multi"
-                      ? `m/48'/${network === "mainnet" ? "0" : "1"}'/0'/2'`
-                      : `m/84'/${network === "mainnet" ? "0" : "1"}'/0'`}
+                    Red:{" "}
+                    <span className="text-white font-semibold">{network}</span>
+                    {" · "}
+                    Ruta:{" "}
+                    <span className="text-white font-semibold font-mono">
+                      {vaultType === "multi"
+                        ? `m/48'/${network === "mainnet" ? "0" : "1"}'/0'/2'`
+                        : `m/84'/${network === "mainnet" ? "0" : "1"}'/0'`}
+                    </span>
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setKeygenStep("generate")}
-                  className="w-full py-3 bg-[#6366f1] hover:bg-[#4f52d9] text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
-                >
-                  Continuar
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {/* ── Paso: Generar ────────────────────────────────────────── */}
-            {keygenStep === "generate" && (
-              <div className="p-5 space-y-5">
                 {/* Diagrama de flujo */}
                 <div className="flex flex-col items-center gap-0 py-2">
                   {[
@@ -486,7 +435,7 @@ export function Step2Keys({ config, onChange }: Props) {
                     { icon: <ArrowDown className="w-3 h-3" />, label: null, sub: null },
                     { icon: <Lock className="w-4 h-4" />, label: network === "mainnet" ? "xprv" : "tprv", sub: "Clave privada maestra" },
                     { icon: <ArrowDown className="w-3 h-3" />, label: null, sub: null },
-                    { icon: <Unlock className="w-4 h-4" />, label: network === "mainnet" ? "xpub" : "tpub", sub: "Clave pública maestra" },
+                    { icon: <GitBranch className="w-4 h-4" />, label: network === "mainnet" ? "xpub" : "tpub", sub: "Clave pública maestra" },
                   ].map((item, idx) =>
                     item.label ? (
                       <div
@@ -507,35 +456,27 @@ export function Step2Keys({ config, onChange }: Props) {
                   )}
                 </div>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setKeygenStep("config")}
-                    className="flex-none px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-sm font-bold rounded-none transition-colors"
-                  >
-                    ← Atrás
-                  </button>
-                  <button
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    className="flex-1 py-3 bg-[#6366f1] hover:bg-[#4f52d9] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
-                  >
-                    {generating ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        Generando…
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Generar semilla ahora
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="w-full py-3 bg-[#6366f1] hover:bg-[#4f52d9] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                >
+                  {generating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Generando…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Generar semilla ahora
+                    </>
+                  )}
+                </button>
               </div>
             )}
 
-            {/* ── Paso: Resultado ──────────────────────────────────────── */}
+            {/* ── Paso: Resultado ────────────────────────────────────────── */}
             {keygenStep === "result" && generatedKey && (
               <div className="p-5 space-y-5">
                 {/* Alerta de seguridad */}
@@ -594,17 +535,7 @@ export function Step2Keys({ config, onChange }: Props) {
 
                 {/* Claves derivadas */}
                 <div className="space-y-3">
-                  {/* Fingerprint */}
-                  <KeyResultField
-                    label="Fingerprint (master)"
-                    value={generatedKey.fingerprint}
-                    field="fingerprint"
-                    copiedField={copiedField}
-                    onCopy={copyToClipboard}
-                    accent
-                  />
-
-                  {/* xprv */}
+                  <KeyResultField label="Fingerprint (master)" value={generatedKey.fingerprint} field="fingerprint" copiedField={copiedField} onCopy={copyToClipboard} accent />
                   <KeyResultField
                     label={network === "mainnet" ? "xprv (clave privada maestra)" : "tprv (clave privada maestra)"}
                     value={generatedKey.xprv}
@@ -613,8 +544,6 @@ export function Step2Keys({ config, onChange }: Props) {
                     onCopy={copyToClipboard}
                     secret
                   />
-
-                  {/* xpub */}
                   <KeyResultField
                     label={network === "mainnet" ? "xpub (clave pública)" : "tpub (clave pública)"}
                     value={generatedKey.xpub}
@@ -622,35 +551,69 @@ export function Step2Keys({ config, onChange }: Props) {
                     copiedField={copiedField}
                     onCopy={copyToClipboard}
                   />
-
-                  {/* Path */}
                   <div className="flex items-center justify-between px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-none">
                     <span className="text-[10px] text-zinc-500 font-mono uppercase">Ruta de derivación</span>
                     <span className="text-xs text-[#818cf8] font-mono font-semibold">{generatedKey.derivationPath}</span>
                   </div>
                 </div>
 
-                {/* Acciones */}
-                <div className="flex gap-3 pt-1">
+                {/* ── Acciones: usar en slot o crear otra ─────────────────── */}
+                <div className="space-y-2 pt-1">
+                  {/* Botón principal: usar en primer slot vacío */}
                   <button
-                    onClick={() => {
-                      setKeygenStep("generate");
-                      setGeneratedKey(null);
-                      setMnemonic([]);
-                      setShowMnemonic(false);
-                    }}
-                    className="flex-none px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-sm font-bold rounded-none transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Nueva
-                  </button>
-                  <button
-                    onClick={handleUseKey}
-                    className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                    onClick={() => handleUseKey()}
+                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
                   >
                     <ChevronRight className="w-4 h-4" />
-                    Usar esta xpub en el slot
+                    Usar esta xpub en el siguiente slot vacío
                   </button>
+
+                  {/* Selector de slot específico si hay múltiples (solo multisig) */}
+                  {slotCount > 1 && (
+                    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(slotCount, 4)}, 1fr)` }}>
+                      {entries.map((e, i) => (
+                        <button
+                          key={e.id}
+                          onClick={() => handleUseKey(e.id)}
+                          className={cn(
+                            "py-2 text-xs font-bold border rounded-none transition-all duration-200 flex flex-col items-center gap-0.5",
+                            e.isValid
+                              ? "border-emerald-800/40 bg-emerald-950/20 text-emerald-400"
+                              : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-[#6366f1] hover:text-[#818cf8]"
+                          )}
+                          title={e.label || `Slot ${i + 1}`}
+                        >
+                          <span>Slot {i + 1}</span>
+                          {e.isValid && <Check className="w-3 h-3" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    {/* Generar otra */}
+                    <button
+                      onClick={() => {
+                        setKeygenStep("generate");
+                        setGeneratedKey(null);
+                        setMnemonic([]);
+                        setShowMnemonic(false);
+                      }}
+                      className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Crear otra llave
+                    </button>
+
+                    {/* Cerrar */}
+                    <button
+                      onClick={handleCloseKeygen}
+                      className="flex-none px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-red-400 text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      Cerrar
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -658,20 +621,20 @@ export function Step2Keys({ config, onChange }: Props) {
         )}
       </div>
 
-      {/* ── Progreso ─────────────────────────────────────────────────────── */}
+      {/* ── Progreso ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 bg-zinc-900/20 p-3 rounded-none border border-zinc-900">
         <div className="flex-1 h-2.5 rounded-none bg-zinc-850 overflow-hidden">
           <div
             className="h-full bg-[#6366f1] rounded-none transition-all duration-500 ease-out"
-            style={{ width: `${(validCount / totalDevices) * 100}%` }}
+            style={{ width: `${(validCount / slotCount) * 100}%` }}
           />
         </div>
         <span className="text-sm font-mono text-zinc-400 font-bold shrink-0">
-          {validCount} de {totalDevices} listos
+          {validCount} de {slotCount} listos
         </span>
       </div>
 
-      {/* ── Tarjetas de dispositivo ───────────────────────────────────────── */}
+      {/* ── Tarjetas de dispositivo ──────────────────────────────────────── */}
       <div className="space-y-4">
         {entries.map((entry, i) => (
           <DeviceKeyCard
@@ -703,25 +666,14 @@ export function Step2Keys({ config, onChange }: Props) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// KeyResultField — campo de clave con copia
+// KeyResultField
 // ══════════════════════════════════════════════════════════════════════════════
 
 function KeyResultField({
-  label,
-  value,
-  field,
-  copiedField,
-  onCopy,
-  secret = false,
-  accent = false,
+  label, value, field, copiedField, onCopy, secret = false, accent = false,
 }: {
-  label: string;
-  value: string;
-  field: string;
-  copiedField: string | null;
-  onCopy: (v: string, f: string) => void;
-  secret?: boolean;
-  accent?: boolean;
+  label: string; value: string; field: string; copiedField: string | null;
+  onCopy: (v: string, f: string) => void; secret?: boolean; accent?: boolean;
 }) {
   const [revealed, setRevealed] = useState(false);
   const display = secret && !revealed ? "•".repeat(Math.min(value.length, 32)) : value;
@@ -732,22 +684,12 @@ function KeyResultField({
         <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">{label}</span>
         <div className="flex items-center gap-2">
           {secret && (
-            <button
-              onClick={() => setRevealed((v) => !v)}
-              className="text-zinc-600 hover:text-zinc-400 transition-colors"
-            >
+            <button onClick={() => setRevealed((v) => !v)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
               {revealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
           )}
-          <button
-            onClick={() => onCopy(value, field)}
-            className="text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            {copiedField === field ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
+          <button onClick={() => onCopy(value, field)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+            {copiedField === field ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
@@ -765,7 +707,7 @@ function KeyResultField({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DeviceKeyCard — igual que antes, sin cambios
+// DeviceKeyCard
 // ══════════════════════════════════════════════════════════════════════════════
 
 interface CardProps {
@@ -785,18 +727,9 @@ interface CardProps {
 }
 
 function DeviceKeyCard({
-  entry,
-  showPathDropdown,
-  network,
-  experienceLevel,
-  onToggleDropdown,
-  onXpubChange,
-  onPathChange,
-  onFingerprintChange,
-  onLabelChange,
-  onTypeChange,
-  onClear,
-  onLoadTestKey,
+  entry, showPathDropdown, network, experienceLevel,
+  onToggleDropdown, onXpubChange, onPathChange, onFingerprintChange,
+  onLabelChange, onTypeChange, onClear, onLoadTestKey,
 }: CardProps) {
   const { setActiveHelp, activeHelp } = useWallet();
   const [showAdvanced, setShowAdvanced] = useState(experienceLevel !== "beginner");
@@ -843,13 +776,7 @@ function DeviceKeyCard({
                 )}
                 title={type === "mobile" ? "Billetera Celular" : type === "laptop" ? "Billetera Laptop" : "Trezor Hardware"}
               >
-                {type === "mobile" ? (
-                  <Smartphone className="w-5 h-5" />
-                ) : type === "laptop" ? (
-                  <Laptop className="w-5 h-5" />
-                ) : (
-                  <Cpu className="w-5 h-5" />
-                )}
+                {type === "mobile" ? <Smartphone className="w-5 h-5" /> : type === "laptop" ? <Laptop className="w-5 h-5" /> : <Cpu className="w-5 h-5" />}
               </button>
             ))}
           </div>
@@ -859,11 +786,9 @@ function DeviceKeyCard({
             value={entry.label}
             onChange={(e) => onLabelChange(e.target.value)}
             placeholder={
-              entry.deviceType === "mobile"
-                ? "Identificar llave (ej. Mi Celular)"
-                : entry.deviceType === "trezor"
-                ? "Identificar llave (ej. Mi Trezor)"
-                : "Identificar llave (ej. Mi Laptop)"
+              entry.deviceType === "mobile" ? "Identificar llave (ej. Mi Celular)"
+              : entry.deviceType === "trezor" ? "Identificar llave (ej. Mi Trezor)"
+              : "Identificar llave (ej. Mi Laptop)"
             }
           />
 
@@ -895,10 +820,7 @@ function DeviceKeyCard({
               type="button"
               onMouseEnter={handleHelpEnter}
               onMouseLeave={() => setActiveHelp(null)}
-              className={cn(
-                "text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded-none",
-                isHelpActive && "text-[#818cf8]"
-              )}
+              className={cn("text-zinc-500 hover:text-[#818cf8] transition-colors p-0.5 rounded-none", isHelpActive && "text-[#818cf8]")}
             >
               <HelpCircle className="w-5 h-5" />
             </button>
@@ -951,9 +873,7 @@ function DeviceKeyCard({
                 type="text"
                 maxLength={8}
                 value={entry.fingerprint}
-                onChange={(e) =>
-                  onFingerprintChange(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ""))
-                }
+                onChange={(e) => onFingerprintChange(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ""))}
                 placeholder="E.g. 1961D712"
                 className={cn(
                   "w-full px-2 py-1 rounded bg-zinc-950 border text-xs font-mono text-zinc-300 h-8 focus:outline-none transition-all duration-300",
@@ -1000,10 +920,7 @@ function DeviceKeyCard({
                   ).map(([label, path]) => (
                     <button
                       key={path}
-                      onClick={() => {
-                        onPathChange(path);
-                        onToggleDropdown();
-                      }}
+                      onClick={() => { onPathChange(path); onToggleDropdown(); }}
                       className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-855 last:border-0"
                     >
                       <div className="text-xs font-bold text-zinc-300">{label}</div>
