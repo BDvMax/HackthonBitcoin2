@@ -9,6 +9,8 @@ import {
   truncateXpub,
   STANDARD_PATHS,
   TESTNET_PATHS,
+  STANDARD_SINGLE_PATHS,
+  TESTNET_SINGLE_PATHS,
   getBitcoinNetwork,
   getDefaultDerivationPath,
   detectKeyNetwork,
@@ -119,7 +121,6 @@ function deriveKeys(
 
 // ── Helpers para mensajes de error ───────────────────────────────────────────
 
-// FIX: ahora también valida incompatibilidad de ruta con vaultType
 function getXpubErrorMessage(
   xpub: string,
   network: "mainnet" | "testnet" | "signet" | "testnet4",
@@ -149,15 +150,7 @@ function getXpubErrorMessage(
 
   return null;
 }
-  console.log(
-    "Palabras:",
-    BIP39_WORDLIST.length
-  );
 
-  console.log(
-    "Vacías:",
-    BIP39_WORDLIST.filter(w => w === "")
-  );
 // ══════════════════════════════════════════════════════════════════════════════
 // Step2Keys
 // ══════════════════════════════════════════════════════════════════════════════
@@ -196,9 +189,13 @@ export function Step2Keys({ config, onChange }: Props) {
     [entries, onChange]
   );
 
-  // FIX: ahora valida también compatibilidad de ruta con vaultType
+  // FIX 1: validateKeyEntry ahora verifica compatibilidad de red PRIMERO
+  // antes de considerar la llave como válida
   const validateKeyEntry = useCallback(
     (xpub: string, fingerprint: string, path: string) => {
+      if (!xpub) return false;
+      // Red incompatible → inválida (bloquea el avance)
+      if (!isKeyCompatibleWithNetwork(xpub, network)) return false;
       const parsed = parseXpub(xpub, network);
       if (!parsed.isValid || parsed.networkMismatch) return false;
       if (!validateDerivationPath(path)) return false;
@@ -781,6 +778,15 @@ function DeviceKeyCard({
     setActiveHelp({ title: helpTitle, text, x: e.clientX, y: e.clientY });
   };
 
+  // Seleccionar el objeto de rutas correcto según vaultType y red.
+  // Cada objeto ya contiene solo las rutas del tipo apropiado.
+  const isTestnet = network === "testnet" || network === "testnet4" || network === "signet";
+  const filteredPaths = Object.entries(
+    vaultType === "single"
+      ? (isTestnet ? TESTNET_SINGLE_PATHS : STANDARD_SINGLE_PATHS)
+      : (isTestnet ? TESTNET_PATHS : STANDARD_PATHS)
+  );
+
   return (
     <div className={cn(
       "relative overflow-hidden rounded-none border flex flex-col md:flex-row items-stretch transition-all duration-300 ease-in-out",
@@ -954,15 +960,12 @@ function DeviceKeyCard({
 
               {showPathDropdown && (
                 <div className="absolute z-50 bottom-full mb-1 left-0 w-full rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
-                  {Object.entries(
-                    network === "testnet" || network === "testnet4" || network === "signet"
-                      ? TESTNET_PATHS
-                      : STANDARD_PATHS
-                  ).map(([label, path]) => {
+                  {filteredPaths.map(([label, path]) => {
                     let explanation = "Formato estándar de derivación.";
                     if (path.includes("2'")) explanation = "Recomendado. Formato moderno (Native SegWit). Comisiones más bajas.";
-                    else if (path.includes("1'")) explanation = "Formato intermedio (Compatible). Usa esto si tu dispositivo viejo tiene problemas.";
-                    else if (path.includes("45'")) explanation = "Formato obsoleto (Legacy). Solo para dispositivos muy antiguos. Comisiones altas.";
+                    else if (path.includes("1'") && path.startsWith("m/48'")) explanation = "Formato intermedio (Compatible). Usa esto si tu dispositivo viejo tiene problemas.";
+                    else if (path.includes("49'")) explanation = "Formato intermedio (Compatible SegWit). Usa esto si tu dispositivo viejo tiene problemas.";
+                    else if (path.includes("44'")) explanation = "Formato obsoleto (Legacy). Solo para dispositivos muy antiguos. Comisiones altas.";
                     
                     return (
                       <button

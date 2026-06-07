@@ -27,7 +27,6 @@ export function getBitcoinNetwork(network: "mainnet" | "testnet" | "signet" | "t
 }
 
 // ── Prefijos de red esperados ────────────────────────────────────────────────
-// xpub/xprv = mainnet, tpub/tprv = testnet/signet/testnet4
 const MAINNET_PREFIXES = ["xpub", "xprv", "zpub", "zprv", "Zpub", "Zprv"];
 const TESTNET_PREFIXES = ["tpub", "tprv", "upub", "uprv", "Upub", "Uprv"];
 
@@ -45,7 +44,6 @@ export function isKeyCompatibleWithNetwork(
   const keyNet = detectKeyNetwork(raw);
   if (keyNet === "unknown") return false;
   if (network === "mainnet") return keyNet === "mainnet";
-  // testnet, testnet4, signet todos usan tpub
   return keyNet === "testnet";
 }
 
@@ -65,10 +63,11 @@ export interface ParsedXpub {
   derivationPath: string;
   depth: number;
   isValid: boolean;
-  networkMismatch?: boolean; // nueva bandera
+  networkMismatch?: boolean;
   error?: string;
 }
 
+// ── Rutas multisig ───────────────────────────────────────────────────────────
 export const STANDARD_PATHS: Record<string, string> = {
   "P2WSH (Nativo SegWit)":    "m/48'/0'/0'/2'",
   "P2SH-P2WSH (Compatible)":  "m/48'/0'/0'/1'",
@@ -80,13 +79,25 @@ export const TESTNET_PATHS: Record<string, string> = {
   "P2SH-P2WSH (Compatible)":  "m/48'/1'/0'/1'",
 };
 
+// ── Rutas single sig ─────────────────────────────────────────────────────────
+export const STANDARD_SINGLE_PATHS: Record<string, string> = {
+  "P2WPKH (Nativo SegWit)":   "m/84'/0'/0'",
+  "P2SH-P2WPKH (Compatible)": "m/49'/0'/0'",
+  "P2PKH (Legacy)":            "m/44'/0'/0'",
+};
+
+export const TESTNET_SINGLE_PATHS: Record<string, string> = {
+  "P2WPKH (Nativo SegWit)":   "m/84'/1'/0'",
+  "P2SH-P2WPKH (Compatible)": "m/49'/1'/0'",
+  "P2PKH (Legacy)":            "m/44'/1'/0'",
+};
+
 export function parseXpub(
   raw: string,
   network: "mainnet" | "testnet" | "signet" | "testnet4" = "mainnet"
 ): ParsedXpub {
   const trimmed = raw.trim();
 
-  // Verificar compatibilidad de red antes de intentar parsear
   if (!isKeyCompatibleWithNetwork(trimmed, network)) {
     const keyNet = detectKeyNetwork(trimmed);
     return {
