@@ -784,15 +784,6 @@ function TrustedKeyInput({ entry, network, experienceLevel, onXpubChange, onPath
               placeholder={experienceLevel === "beginner" ? "Ej: Mamá, Hermano, Abogado..." : "Nombre del Contacto..."}
             />
           </div>
-          {!hasXpub && (
-            <button
-              onClick={onLoadTestKey}
-              className="text-xs text-zinc-300 hover:text-white flex items-center gap-1 bg-[#1c223a] px-2.5 py-1.5 rounded-none border border-[#2c3558] transition-colors font-medium"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
-              Prueba
-            </button>
-          )}
         </div>
 
         {/* XPUB input */}
