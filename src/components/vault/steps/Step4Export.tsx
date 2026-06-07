@@ -22,6 +22,7 @@ export function Step4Export({ config }: Props) {
   const [copiedAddress, setCopiedAddress] = useState<number | null>(null);
   const [showAddresses, setShowAddresses] = useState(true);
   const [showFullscreenQR, setShowFullscreenQR] = useState(false);
+  const [showAdvancedText, setShowAdvancedText] = useState(false);
 
   // States for blockchain explorer
   const [loadingAddressInfo, setLoadingAddressInfo] = useState(false);
@@ -47,8 +48,7 @@ export function Step4Export({ config }: Props) {
         config.requiredApprovals,
         config.network,
         5,
-        0,
-        raw
+        0
       );
       return { descriptor: withChecksum, addresses: addrs, error: "" };
     } catch (error: unknown) {
@@ -341,7 +341,7 @@ export function Step4Export({ config }: Props) {
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
-                  {experienceLevel === "beginner" ? "Código de Registro de Bóveda" : "Descriptor BIP380"}
+                  {experienceLevel === "beginner" ? "Código de Seguridad de Bóveda" : "Descriptor BIP380"}
                 </span>
                 <button
                   onClick={copy}
@@ -360,16 +360,30 @@ export function Step4Export({ config }: Props) {
                   )}
                 </button>
               </div>
-              <p className="text-xs font-mono text-zinc-350 break-all bg-zinc-950 p-3 rounded-none-none border border-[#1e2640] leading-relaxed max-h-24 overflow-y-auto">
-                {descriptor}
-              </p>
+              <div className="flex items-center justify-between mt-4">
+                {experienceLevel === "beginner" ? (
+                  <button
+                    onClick={() => setShowAdvancedText((v) => !v)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 font-medium underline underline-offset-2 flex items-center gap-1"
+                  >
+                    {showAdvancedText ? "Ocultar código avanzado" : "Mostrar código avanzado"}
+                  </button>
+                ) : (
+                  <span />
+                )}
+              </div>
+              {(experienceLevel !== "beginner" || showAdvancedText) && (
+                <p className="text-xs font-mono text-zinc-350 break-all bg-zinc-950 p-3 rounded-none-none border border-[#1e2640] leading-relaxed max-h-24 overflow-y-auto">
+                  {descriptor}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Resumen de configuración */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { label: "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
+              { label: experienceLevel === "beginner" ? "Regla de firmas" : "Regla", value: `${config.requiredApprovals} de ${config.totalDevices}` },
               { label: "Red", value: config.network === "mainnet" ? "Bitcoin" : "Testnet" },
               { label: "Seguro", value: config.timelock.enabled ? `Activo (${blocksToHuman(config.timelock.blocks)})` : "Inactivo" },
             ].map((item) => (
@@ -393,8 +407,8 @@ export function Step4Export({ config }: Props) {
             </p>
           </div>
 
-          {/* Direcciones derivadas */}
-          {addresses.length > 0 && (
+          {/* Direcciones derivadas (Oculto para principiantes) */}
+          {experienceLevel !== "beginner" && addresses.length > 0 && (
             <div className="rounded-none-none border border-[#1e2640] bg-zinc-950/40">
               <button
                 onClick={() => setShowAddresses((v) => !v)}
@@ -447,8 +461,8 @@ export function Step4Export({ config }: Props) {
             </div>
           )}
 
-          {/* Blockchain Info Explorer Panel */}
-          {selectedExplorerAddr && (
+          {/* Blockchain Info Explorer Panel (Oculto para principiantes) */}
+          {experienceLevel !== "beginner" && selectedExplorerAddr && (
             <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/20 p-5 space-y-4 animate-slideUp">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <span className="text-xs uppercase tracking-widest text-[#818cf8] font-mono font-bold flex items-center gap-1.5">

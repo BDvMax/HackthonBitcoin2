@@ -154,7 +154,7 @@ function getXpubErrorMessage(
 export function Step2Keys({ config, onChange }: Props) {
   const { totalDevices, keys, network, vaultType } = config;
   const { experienceLevel } = useWallet();
-  const { playClick, playSuccess, playError } = useSoundEffects();
+  const { playClick, playSuccess, playError, playToggle } = useSoundEffects();
 
   const [keygenOpen, setKeygenOpen] = useState(false);
   const [keygenWordCount, setKeygenWordCount] = useState<12 | 24>(24);
@@ -166,6 +166,8 @@ export function Step2Keys({ config, onChange }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [keygenStep, setKeygenStep] = useState<"generate" | "result">("generate");
   const [showMnemonic, setShowMnemonic] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [seedBackedUp, setSeedBackedUp] = useState(false);
 
   const slotCount = vaultType === "single" ? 1 : totalDevices;
 
@@ -278,6 +280,8 @@ export function Step2Keys({ config, onChange }: Props) {
     setGeneratedKey(null);
     setMnemonic([]);
     setShowMnemonic(false);
+    setShowWarningModal(false);
+    setSeedBackedUp(false);
   };
 
   const handleCloseKeygen = () => {
@@ -286,6 +290,8 @@ export function Step2Keys({ config, onChange }: Props) {
     setGeneratedKey(null);
     setMnemonic([]);
     setShowMnemonic(false);
+    setShowWarningModal(false);
+    setSeedBackedUp(false);
   };
 
   const copyToClipboard = async (text: string, field: string) => {
@@ -319,29 +325,53 @@ export function Step2Keys({ config, onChange }: Props) {
       </div>
 
       {/* Generador BIP39 */}
-      <div className="border border-[#1e2640] bg-[#0d1120]/60 rounded-none overflow-hidden">
+      <div className={cn(
+        "rounded-xl overflow-hidden transition-all duration-300",
+        keygenOpen ? "border-[#6366f1] shadow-[0_0_20px_rgba(99,102,241,0.15)] bg-[#121626]" : "border border-[#6366f1]/50 bg-[#6366f1]/5 hover:bg-[#6366f1]/10 hover:border-[#6366f1]/80"
+      )}>
         <button
           onClick={() => { playClick(); setKeygenOpen((v) => !v); }}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#141928]/80 transition-colors"
+          className="w-full flex items-center justify-between px-5 py-5 transition-colors relative group"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-none bg-[#6366f1]/15 border border-[#6366f1]/30 flex items-center justify-center">
-              <KeyRound className="w-4 h-4 text-[#818cf8]" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-full bg-[#6366f1] flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-110 transition-transform">
+              <KeyRound className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-white">Generar nueva llave BIP39</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Crea una semilla HD y deriva xpub/xprv para importar en tu dispositivo</p>
+              <p className="text-lg font-extrabold text-white">Generar nueva llave</p>
+              <p className="text-sm text-zinc-300 mt-0.5">
+                {experienceLevel === "beginner" ? "Crea una llave segura si aún no tienes una." : "Crea una semilla HD y deriva xpub/xprv."}
+              </p>
             </div>
           </div>
-          <ChevronRight className={cn("w-5 h-5 text-zinc-500 transition-transform duration-200", keygenOpen && "rotate-90")} />
+          <ChevronRight className={cn("w-6 h-6 text-[#818cf8] transition-transform duration-300 relative z-10", keygenOpen && "rotate-90")} />
         </button>
 
         {keygenOpen && (
-          <div className="border-t border-[#1e2640]">
+          <div className="border-t border-[#6366f1]/30">
             {keygenStep === "generate" && (
-              <div className="p-5 space-y-5">
+              <div className="p-5 space-y-6">
+                
+                {experienceLevel === "beginner" && (
+                  <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div className="flex-1 bg-[#0a0c14] border border-[#1e2640] rounded-lg p-4 animate-slideUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+                      <div className="w-8 h-8 rounded-full bg-[#6366f1]/20 text-[#818cf8] flex items-center justify-center font-bold mb-2">1</div>
+                      <p className="text-xs text-zinc-300">Selecciona el nivel de seguridad (palabras).</p>
+                    </div>
+                    <div className="flex-1 bg-[#0a0c14] border border-[#1e2640] rounded-lg p-4 animate-slideUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+                      <div className="w-8 h-8 rounded-full bg-[#6366f1]/20 text-[#818cf8] flex items-center justify-center font-bold mb-2">2</div>
+                      <p className="text-xs text-zinc-300">Anota las palabras generadas en un papel.</p>
+                    </div>
+                    <div className="flex-1 bg-[#0a0c14] border border-[#1e2640] rounded-lg p-4 animate-slideUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+                      <div className="w-8 h-8 rounded-full bg-[#6366f1]/20 text-[#818cf8] flex items-center justify-center font-bold mb-2">3</div>
+                      <p className="text-xs text-zinc-300">Guarda la llave secreta en lugar seguro.</p>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-3">Longitud de semilla</p>
+                  <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-3">
+                    {experienceLevel === "beginner" ? "Nivel de Seguridad" : "Longitud de semilla"}
+                  </p>
                   <div className="flex gap-3">
                     {([12, 24] as const).map((n) => (
                       <button
@@ -363,27 +393,29 @@ export function Step2Keys({ config, onChange }: Props) {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-2">
-                    Passphrase BIP39 <span className="text-zinc-600 normal-case">(opcional)</span>
-                  </p>
-                  <div className="relative">
-                    <input
-                      type={showPassphrase ? "text" : "password"}
-                      value={keygenPassphrase}
-                      onChange={(e) => setKeygenPassphrase(e.target.value)}
-                      placeholder="Dejar vacío si no se usa…"
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-none px-3 py-2.5 pr-10 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-[#6366f1]/50 transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassphrase((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
-                    >
-                      {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                {experienceLevel !== "beginner" && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold mb-2">
+                      Passphrase BIP39 <span className="text-zinc-600 normal-case">(opcional)</span>
+                    </p>
+                    <div className="relative">
+                      <input
+                        type={showPassphrase ? "text" : "password"}
+                        value={keygenPassphrase}
+                        onChange={(e) => setKeygenPassphrase(e.target.value)}
+                        placeholder="Dejar vacío si no se usa…"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-none px-3 py-2.5 pr-10 text-sm font-mono text-zinc-300 placeholder:text-zinc-700 outline-none focus:border-[#6366f1]/50 transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassphrase((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
+                      >
+                        {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-[#6366f1]/5 border border-[#6366f1]/20 rounded-none">
                   <GitBranch className="w-4 h-4 text-[#818cf8] shrink-0" />
@@ -396,13 +428,13 @@ export function Step2Keys({ config, onChange }: Props) {
 
                 <div className="flex flex-col items-center gap-0 py-2">
                   {[
-                    { icon: <Hash className="w-4 h-4" />, label: "Entropía aleatoria", sub: `${keygenWordCount === 24 ? 256 : 128} bits` },
+                    { icon: <Hash className="w-4 h-4" />, label: experienceLevel === "beginner" ? "Generación aleatoria segura" : "Entropía aleatoria", sub: `${keygenWordCount === 24 ? 256 : 128} bits` },
                     { icon: <ArrowDown className="w-3 h-3" />, label: null, sub: null },
-                    { icon: <GitBranch className="w-4 h-4" />, label: "Semilla BIP39", sub: `${keygenWordCount} palabras` },
+                    { icon: <GitBranch className="w-4 h-4" />, label: experienceLevel === "beginner" ? "Palabras secretas" : "Semilla BIP39", sub: `${keygenWordCount} palabras` },
                     { icon: <ArrowDown className="w-3 h-3" />, label: null, sub: null },
-                    { icon: <Lock className="w-4 h-4" />, label: network === "mainnet" ? "xprv" : "tprv", sub: "Clave privada maestra" },
+                    { icon: <Lock className="w-4 h-4" />, label: network === "mainnet" ? "xprv" : "tprv", sub: experienceLevel === "beginner" ? "Llave secreta principal (Nunca compartir)" : "Clave privada maestra" },
                     { icon: <ArrowDown className="w-3 h-3" />, label: null, sub: null },
-                    { icon: <GitBranch className="w-4 h-4" />, label: network === "mainnet" ? "xpub" : "tpub", sub: "Clave pública maestra" },
+                    { icon: <GitBranch className="w-4 h-4" />, label: network === "mainnet" ? "xpub" : "tpub", sub: experienceLevel === "beginner" ? "Llave pública para esta bóveda" : "Clave pública maestra" },
                   ].map((item, idx) =>
                     item.label ? (
                       <div key={idx} className="flex items-center gap-3 w-full max-w-xs px-4 py-2.5 bg-[#0d1120] border border-[#1e2640] rounded-none">
@@ -429,55 +461,137 @@ export function Step2Keys({ config, onChange }: Props) {
             )}
 
             {keygenStep === "result" && generatedKey && (
-              <div className="p-5 space-y-5">
-                <div className="flex gap-3 p-4 bg-amber-950/30 border border-amber-800/40 rounded-none">
-                  <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-300 leading-relaxed">
-                    <strong className="block text-amber-200 mb-0.5">Guarda tu semilla en papel ahora.</strong>
-                    Nunca la compartas. Nunca la guardes en formato digital.
+              <div className="p-5 space-y-6">
+                <div className="flex gap-3 p-4 bg-[#121626]/80 border border-[#6366f1]/40 rounded-xl">
+                  <ShieldCheck className="w-6 h-6 text-[#818cf8] shrink-0 mt-0.5" />
+                  <div className="text-sm text-zinc-300 leading-relaxed">
+                    <strong className="block text-white mb-1">Guarda tu semilla en papel ahora.</strong>
+                    Nunca la compartas. Nunca la guardes en formato digital o en la nube.
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">Semilla BIP39 · {keygenWordCount} palabras</p>
+                    <p className="text-xs uppercase tracking-wider text-zinc-500 font-mono font-bold">
+                      {experienceLevel === "beginner" ? `Palabras Secretas · ${keygenWordCount} palabras` : `Semilla BIP39 · ${keygenWordCount} palabras`}
+                    </p>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setShowMnemonic((v) => !v)} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
-                        {showMnemonic ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        {showMnemonic ? "Ocultar" : "Mostrar"}
-                      </button>
+                      {showMnemonic && (
+                        <button onClick={() => setShowMnemonic(false)} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Ocultar
+                        </button>
+                      )}
                       <button onClick={() => copyToClipboard(generatedKey.mnemonic, "mnemonic")} className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
                         {copiedField === "mnemonic" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   </div>
-                  <div className={cn("grid grid-cols-4 gap-1.5 transition-all duration-300", !showMnemonic && "blur-sm select-none pointer-events-none")}>
-                    {mnemonic.map((word, i) => (
-                      <div key={i} className="flex items-center gap-1.5 bg-zinc-950 border border-zinc-800 rounded-none px-2 py-1.5">
-                        <span className="text-[9px] text-zinc-600 w-4 text-right shrink-0">{i + 1}</span>
-                        <span className="text-xs text-[#818cf8] font-mono font-semibold">{word}</span>
+                  <div className="relative border border-[#1e2640] rounded-none bg-[#0d1120] p-4">
+                    <div className={cn("grid grid-cols-3 sm:grid-cols-4 gap-2 transition-all duration-300", !showMnemonic && "blur-md select-none pointer-events-none opacity-20")}>
+                      {mnemonic.map((word, i) => (
+                        <div key={i} className="flex items-center gap-1.5 bg-zinc-950 border border-zinc-800 rounded-none px-2 py-1.5">
+                          <span className="text-[9px] text-zinc-600 w-4 text-right shrink-0">{i + 1}</span>
+                          <span className="text-xs text-[#818cf8] font-mono font-semibold">{word}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {!showMnemonic && !showWarningModal && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <button
+                          onClick={() => setShowWarningModal(true)}
+                          className="px-5 py-2.5 bg-[#121626] border border-[#6366f1]/40 hover:bg-[#6366f1]/20 text-white font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.1)] flex items-center gap-2 rounded-none transition-all hover:scale-105"
+                        >
+                          <Eye className="w-4 h-4 text-[#818cf8]" /> Mostrar Palabras
+                        </button>
                       </div>
-                    ))}
+                    )}
+
+                    {!showMnemonic && showWarningModal && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#0a0c14]/90 backdrop-blur-sm p-4 text-center">
+                        <AlertTriangle className="w-6 h-6 text-[#818cf8] mb-2" />
+                        <h4 className="text-white font-bold text-sm mb-1">Información Privada</h4>
+                        <p className="text-xs text-zinc-400 max-w-[250px] mb-4">
+                          Cualquiera con estas palabras puede acceder a tus fondos. Asegúrate de estar a solas.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowWarningModal(false)}
+                            className="px-4 py-2 border border-[#1e2640] bg-[#121626] text-white text-xs font-bold hover:bg-[#181d33] transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => {
+                              playSuccess();
+                              setShowWarningModal(false);
+                              setShowMnemonic(true);
+                            }}
+                            className="px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold transition-colors"
+                          >
+                            Mostrar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <KeyResultField label="Fingerprint (master)" value={generatedKey.fingerprint} field="fingerprint" copiedField={copiedField} onCopy={copyToClipboard} accent />
-                  <KeyResultField label={network === "mainnet" ? "xprv (clave privada maestra)" : "tprv (clave privada maestra)"} value={generatedKey.xprv} field="xprv" copiedField={copiedField} onCopy={copyToClipboard} secret />
+                  <KeyResultField label={experienceLevel === "beginner" ? "fingerprint (identificador único de llave)" : "Fingerprint (master)"} value={generatedKey.fingerprint} field="fingerprint" copiedField={copiedField} onCopy={copyToClipboard} accent tooltip="Huella digital corta de la llave maestra. Sirve para identificar esta semilla sin revelar el secreto. Solo para lectura." />
+                  <KeyResultField label={network === "mainnet" ? "xprv (clave privada maestra)" : "tprv (clave privada maestra)"} value={generatedKey.xprv} field="xprv" copiedField={copiedField} onCopy={copyToClipboard} secret tooltip="¡CUIDADO! Nunca compartas la clave privada (xprv). Quien la posea tendrá control total e inmediato sobre tus fondos." />
                   <KeyResultField label={network === "mainnet" ? "xpub (clave pública)" : "tpub (clave pública)"} value={generatedKey.xpub} field="xpub" copiedField={copiedField} onCopy={copyToClipboard} />
-                  <div className="flex items-center justify-between px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-none">
-                    <span className="text-[10px] text-zinc-500 font-mono uppercase">Ruta de derivación</span>
+                  <div className="flex items-center justify-between px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-none group">
+                    <div className="flex items-center gap-1.5 relative">
+                      <span className="text-[10px] text-zinc-500 font-mono uppercase">Ruta de derivación</span>
+                      <div className="flex items-center justify-center">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500/80 cursor-help" />
+                        <div className="pointer-events-none absolute bottom-full mb-2 left-0 w-[220px] opacity-0 group-hover:opacity-100 transition-opacity bg-amber-950 border border-amber-900/50 text-amber-200 text-xs p-2.5 rounded shadow-2xl z-50">
+                          <strong className="block mb-1 text-amber-400">Ruta de Derivación:</strong>
+                          Es el "mapa" técnico que dice cómo calcular las direcciones a partir de tu semilla. Mantén el valor por defecto si eres principiante.
+                        </div>
+                      </div>
+                    </div>
                     <span className="text-xs text-[#818cf8] font-mono font-semibold">{generatedKey.derivationPath}</span>
                   </div>
                 </div>
 
+                {/* Layer 8 Error Prevention Checkbox */}
+                <label 
+                  className={cn(
+                    "flex items-start gap-4 p-5 mt-5 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]",
+                    seedBackedUp ? "border-[#6366f1] bg-[#6366f1]/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]" : "border-[#1e2640] bg-[#121626] hover:border-[#6366f1]/50"
+                  )}
+                >
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={seedBackedUp}
+                      onChange={(e) => {
+                        try { playToggle(); } catch(err) {}
+                        setSeedBackedUp(e.target.checked);
+                      }}
+                      className="w-7 h-7 cursor-pointer appearance-none rounded border-2 border-zinc-600 bg-zinc-900 checked:bg-[#6366f1] checked:border-[#6366f1] transition-colors"
+                    />
+                    {seedBackedUp && <Check className="absolute w-5 h-5 text-white pointer-events-none" />}
+                  </div>
+                  <span className={cn(
+                    "text-xs sm:text-sm leading-relaxed select-none transition-colors",
+                    seedBackedUp ? "text-white font-medium" : "text-zinc-400 font-normal"
+                  )}>
+                    Confirmo que he respaldado estas palabras en un <strong className="text-[#818cf8]">lugar físico seguro (papel, placa de metal, etc.)</strong> y no en medios digitales. Entiendo que si las pierdo, perderé acceso a mis fondos.
+                  </span>
+                </label>
+
                 <div className="space-y-2 pt-1">
                   <button
                     onClick={() => handleUseKey()}
-                    className="w-full py-3 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
+                    disabled={!seedBackedUp}
+                    className="w-full py-3 bg-[#6366f1] hover:bg-[#4f46e5] disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:border-zinc-800 disabled:cursor-not-allowed border border-[#6366f1]/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] text-white text-sm font-bold rounded-none transition-all flex items-center justify-center gap-2"
                   >
                     <ChevronRight className="w-4 h-4" />
-                    Usar esta xpub en el siguiente slot vacío
+                    Usar esta llave en el siguiente espacio vacío
                   </button>
 
                   {slotCount > 1 && (
@@ -486,14 +600,17 @@ export function Step2Keys({ config, onChange }: Props) {
                         <button
                           key={e.id}
                           onClick={() => handleUseKey(e.id)}
+                          disabled={!seedBackedUp}
                           className={cn(
                             "py-2 text-xs font-bold border rounded-none transition-all duration-200 flex flex-col items-center gap-0.5",
-                            e.isValid
+                            !seedBackedUp
+                              ? "border-zinc-800 bg-zinc-900/50 text-zinc-600 cursor-not-allowed"
+                              : e.isValid
                               ? "border-emerald-800/40 bg-emerald-950/20 text-emerald-400"
                               : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-[#6366f1] hover:text-[#818cf8]"
                           )}
                         >
-                          <span>Slot {i + 1}</span>
+                          <span>Espacio {i + 1}</span>
                           {e.isValid && <Check className="w-3 h-3" />}
                         </button>
                       ))}
@@ -502,7 +619,7 @@ export function Step2Keys({ config, onChange }: Props) {
 
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => { setKeygenStep("generate"); setGeneratedKey(null); setMnemonic([]); setShowMnemonic(false); }}
+                      onClick={() => { setKeygenStep("generate"); setGeneratedKey(null); setMnemonic([]); setShowMnemonic(false); setSeedBackedUp(false); }}
                       className="flex-1 px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-sm font-bold rounded-none transition-colors flex items-center justify-center gap-2"
                     >
                       <RefreshCw className="w-4 h-4" />Crear otra llave
@@ -554,23 +671,34 @@ export function Step2Keys({ config, onChange }: Props) {
           />
         ))}
       </div>
+
     </div>
   );
 }
 
 // ── KeyResultField ────────────────────────────────────────────────────────────
 
-function KeyResultField({ label, value, field, copiedField, onCopy, secret = false, accent = false }: {
+function KeyResultField({ label, value, field, copiedField, onCopy, secret = false, accent = false, tooltip }: {
   label: string; value: string; field: string; copiedField: string | null;
-  onCopy: (v: string, f: string) => void; secret?: boolean; accent?: boolean;
+  onCopy: (v: string, f: string) => void; secret?: boolean; accent?: boolean; tooltip?: string;
 }) {
   const [revealed, setRevealed] = useState(false);
   const display = secret && !revealed ? "•".repeat(Math.min(value.length, 32)) : value;
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">{label}</span>
+      <div className="flex items-center justify-between group">
+        <div className="flex items-center gap-1.5 relative">
+          <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">{label}</span>
+          {tooltip && (
+            <div className="flex items-center justify-center">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500/80 cursor-help" />
+              <div className="pointer-events-none absolute bottom-full mb-2 left-0 w-[220px] opacity-0 group-hover:opacity-100 transition-opacity bg-amber-950 border border-amber-900/50 text-amber-200 text-xs p-2.5 rounded shadow-2xl z-50">
+                {tooltip}
+              </div>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {secret && (
             <button onClick={() => setRevealed((v) => !v)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
@@ -648,7 +776,7 @@ function DeviceKeyCard({
       entry.isValid
         ? "border-emerald-800/40 bg-emerald-950/5"
         : hasNetworkMismatch
-        ? "border-amber-800/40 bg-amber-950/5"
+        ? "border-red-800/40 bg-red-950/5"
         : hasXpub && !entry.isValid
         ? "border-red-800/40 bg-red-950/5"
         : "border-[#1e2640] bg-[#121626]/40"
@@ -819,16 +947,28 @@ function DeviceKeyCard({
                     network === "testnet" || network === "testnet4" || network === "signet"
                       ? TESTNET_PATHS
                       : STANDARD_PATHS
-                  ).map(([label, path]) => (
-                    <button
-                      key={path}
-                      onClick={() => { onPathChange(path); onToggleDropdown(); }}
-                      className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
-                    >
-                      <div className="text-xs font-bold text-zinc-300">{label}</div>
-                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{path}</div>
-                    </button>
-                  ))}
+                  ).map(([label, path]) => {
+                    let explanation = "Formato estándar de derivación.";
+                    if (path.includes("2'")) explanation = "Recomendado. Formato moderno (Native SegWit). Comisiones más bajas.";
+                    else if (path.includes("1'")) explanation = "Formato intermedio (Compatible). Usa esto si tu dispositivo viejo tiene problemas.";
+                    else if (path.includes("45'")) explanation = "Formato obsoleto (Legacy). Solo para dispositivos muy antiguos. Comisiones altas.";
+                    
+                    return (
+                      <button
+                        key={path}
+                        onClick={() => { onPathChange(path); onToggleDropdown(); }}
+                        className="w-full px-3 py-2 text-left hover:bg-[#6366f1]/10 transition-colors border-b border-zinc-800 last:border-0 group"
+                      >
+                        <div className="flex justify-between items-center mb-0.5">
+                          <div className="text-xs font-bold text-zinc-300 group-hover:text-[#818cf8] transition-colors">{label}</div>
+                          <div className="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-1.5 py-0.5 rounded">{path}</div>
+                        </div>
+                        {experienceLevel === "beginner" && (
+                          <div className="text-[10px] text-zinc-400 mt-1 leading-tight">{explanation}</div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

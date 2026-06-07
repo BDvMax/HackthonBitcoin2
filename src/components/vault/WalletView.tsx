@@ -117,10 +117,10 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
   if (!data) return null;
 
   return (
-    <div className="min-h-screen bg-[#070913] bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:3rem_3rem] text-white">
+    <div className="min-h-screen bg-[#0a0c14] text-white">
 
       {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-[#1e2640] bg-[#070913]/90 backdrop-blur-md px-4 py-3">
+      <div className="sticky top-0 z-20 border-b border-[#1e2640] bg-[#0a0c14]/90 backdrop-blur-md px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors">
@@ -151,7 +151,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
 
         {/* Balance */}
-        <div className="rounded-2xl border border-[#1e2640] bg-[#121626]/80 backdrop-blur-md p-6">
+        <div className="border border-[#1e2640] bg-[#0d1120] p-6 rounded-none">
           <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-mono mb-2">Balance total</p>
           <div className="flex items-baseline gap-3 mb-3">
             <span className="text-5xl font-extrabold tracking-tight font-mono">{satsToBTC(data.totalBalance, 6)}</span>
@@ -183,7 +183,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0.5 p-1 rounded-xl bg-[#121626] border border-[#1e2640] overflow-x-auto">
+        <div className="flex gap-0.5 p-1 bg-[#0d1120] border border-[#1e2640] overflow-x-auto rounded-none">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn(
@@ -204,7 +204,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
                 { label: "UTXOs",         value: data.utxos.length.toString(),         sub: `${data.utxos.filter(u => u.confirmed).length} confirmado(s)` },
                 { label: "Quórum",        value: `${config.requiredApprovals}/${config.totalDevices}`, sub: "firmas requeridas" },
               ].map(s => (
-                <div key={s.label} className="rounded-xl border border-[#1e2640] bg-[#121626]/60 p-3 text-center">
+                <div key={s.label} className="border border-[#1e2640] bg-[#0d1120] p-3 text-center rounded-none hover:bg-zinc-900/30 transition-colors">
                   <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-mono">{s.label}</p>
                   <p className="text-xl font-bold mt-1">{s.value}</p>
                   <p className="text-[9px] text-zinc-600 mt-0.5">{s.sub}</p>
@@ -216,7 +216,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
             {(() => {
               const next = data.addresses.find(a => !a.hasActivity);
               return next ? (
-                <div className="rounded-xl border border-[#1e2640] bg-[#121626]/60 p-4 space-y-2">
+                <div className="border border-[#1e2640] bg-[#0d1120] p-4 space-y-2 rounded-none">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Dirección de recibo</span>
                     <span className="text-[9px] font-mono text-zinc-700">índice {next.index}</span>
@@ -298,7 +298,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
         {tab === "llaves" && (
           <div className="space-y-3">
             {validKeys.map((key, i) => (
-              <div key={key.id} className="rounded-xl border border-[#1e2640] bg-[#121626]/60 p-4 space-y-3">
+              <div key={key.id} className="border border-[#1e2640] bg-[#0d1120] p-4 space-y-3 rounded-none hover:bg-zinc-900/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#6366f1]/10 border border-[#6366f1]/20 flex items-center justify-center shrink-0">
                     <Key className="w-4 h-4 text-[#818cf8]" />
@@ -343,7 +343,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
         {/* ── DESCRIPTOR ── */}
         {tab === "descriptor" && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-[#1e2640] bg-[#0a0d1a] p-4 space-y-3">
+            <div className="border border-[#1e2640] bg-[#0d1120] p-4 space-y-3 rounded-none">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Descriptor BIP380</span>
                 <button onClick={() => copy(data.descriptor, "descriptor")} className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
@@ -352,7 +352,7 @@ export function WalletView({ config, onBack }: { config: VaultConfig; onBack: ()
               </div>
               <p className="text-[11px] font-mono text-zinc-400 break-all leading-relaxed select-all cursor-text">{data.descriptor}</p>
             </div>
-            <div className="rounded-xl border border-[#1e2640] bg-[#121626]/60 p-4 space-y-3">
+            <div className="border border-[#1e2640] bg-[#0d1120] p-4 space-y-3 rounded-none">
               <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Anatomía</p>
               <DItem label="Script"   value="wsh( )"  desc="P2WSH — Pay-to-Witness-Script-Hash" />
               <DItem label="Multisig" value={`sortedmulti(${config.requiredApprovals},...)`} desc={`${config.requiredApprovals}-de-${validKeys.length} llaves`} />

@@ -8,7 +8,7 @@ import { Step2Keys } from "./steps/Step2Keys";
 import { Step3Recovery } from "./steps/Step3Recovery";
 import { Step4Export } from "./steps/Step4Export";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud, Check, ClipboardPaste, AlertTriangle, Settings, User, GraduationCap, Terminal } from "lucide-react";
+import { ArrowRight, ArrowLeft, Smartphone, Laptop, Lock, Unlock, HelpCircle, CheckCircle2, Circle, X, Plus, FileText, UploadCloud, Check, ClipboardPaste, AlertTriangle, Settings, User, GraduationCap, Terminal, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SetupStep, TimelockConfig, VaultConfig, XpubEntry } from "@/lib/types/vault";
 import { WalletView } from "./WalletView";
@@ -49,6 +49,21 @@ function SetupStepperContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [highestStep, setHighestStep] = useState<number>(0);
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showBeginnerSummary, setShowBeginnerSummary] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (step > 0 && !showWallet) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [step, showWallet]);
 
   useEffect(() => {
     if (step > highestStep) {
@@ -208,12 +223,52 @@ function SetupStepperContent() {
     setDescriptorDraft("");
   };
 
+  const isStep3Complete = () => {
+    if (!config.timelock.enabled) return true;
+    if (config.vaultType === 'single') return !!config.timelock.trustedKey?.isValid;
+    return !!config.timelock.recoveryMode && (config.timelock.recoveryMode === 'current-keys' || !!config.timelock.trustedKey?.isValid);
+  };
+
   const goNext = () => {
+    if (step === 3 && !isStep3Complete()) {
+      playError();
+      setShowSkipWarning(true);
+      return;
+    }
     if (step < 4) {
       playSuccess();
       setStep((step + 1) as SetupStep);
     }
   };
+
+  const forceSkipAndNext = () => {
+    updateConfig({
+      timelock: {
+        ...config.timelock,
+        enabled: true,
+        blocks: 25920, // 6 meses
+        recoveryMode: "current-keys",
+        recoveryApprovals: 1
+      }
+    });
+    setShowSkipWarning(false);
+    playSuccess();
+    setStep(4);
+  };
+
+  const finalizeVault = () => {
+    if (experienceLevel === "beginner" && !showBeginnerSummary) {
+      setShowBeginnerSummary(true);
+      return;
+    }
+    setShowBeginnerSummary(false);
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+      setShowWallet(true);
+    }, 2500);
+  };
+
   const goBack = () => {
     if (step > 0) {
       playClick();
@@ -426,7 +481,7 @@ function SetupStepperContent() {
 
         <div className="w-full max-w-2xl space-y-8 animate-slideUp relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Básico */}
+            {/* Principiante */}
             <button
               onClick={() => {
                 playToggle();
@@ -444,10 +499,10 @@ function SetupStepperContent() {
               </div>
               <div className="space-y-2">
                 <span className="font-bold text-xl text-white block group-hover:text-[#818cf8] transition-colors">
-                  Básico
+                  Principiante
                 </span>
                 <span className="text-sm text-zinc-400 block leading-relaxed px-2">
-                  Explicaciones sencillas, sin tecnicismos y con ayudas visuales interactivas.
+                  Recomendado si eres nuevo en Bitcoin. Explicaciones sencillas paso a paso, sin tecnicismos complejos y con guías visuales interactivas.
                 </span>
               </div>
             </button>
@@ -473,15 +528,43 @@ function SetupStepperContent() {
                   Técnico
                 </span>
                 <span className="text-sm text-zinc-400 block leading-relaxed px-2">
-                  Términos nativos de Bitcoin y sin rodeos.
+                  Recomendado para expertos. Utiliza términos nativos de Bitcoin y configuraciones técnicas directas sin explicaciones introductorias.
                 </span>
               </div>
             </button>
           </div>
 
+          {/* Términos y condiciones */}
+          <label 
+            className={cn(
+              "flex items-start gap-4 p-4 rounded-none border-2 cursor-pointer transition-all duration-200",
+              termsAccepted ? "border-[#6366f1] bg-[#6366f1]/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]" : "border-[#1e2640] bg-[#121626] hover:border-[#6366f1]/50"
+            )}
+          >
+            <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => {
+                  try { playToggle(); } catch(err) {}
+                  setTermsAccepted(e.target.checked);
+                }}
+                className="w-5 h-5 cursor-pointer appearance-none rounded border-2 border-zinc-650 bg-zinc-900 checked:bg-[#6366f1] checked:border-[#6366f1] transition-colors"
+              />
+              {termsAccepted && <Check className="absolute w-3.5 h-3.5 text-white pointer-events-none" />}
+            </div>
+            <span className={cn(
+              "text-xs leading-relaxed select-none transition-colors text-left",
+              termsAccepted ? "text-white font-medium" : "text-zinc-400 font-normal"
+            )}>
+              Acepto los términos y condiciones de seguridad. Entiendo que Kukul Vault es una aplicación de autocustodia local; <strong className="text-[#818cf8]">no almacenamos, guardamos ni transmitimos ninguna semilla, clave privada ni información de tu bóveda</strong> en ningún servidor. Todo se procesa de forma 100% privada dentro de tu propio navegador.
+            </span>
+          </label>
+
           <Button
-            className="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold h-14 text-base rounded-none-none mt-2 transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+            className="w-full bg-[#6366f1] hover:bg-[#4f46e5] disabled:bg-zinc-800/50 disabled:text-zinc-550 disabled:border-zinc-800 disabled:cursor-not-allowed disabled:shadow-none text-white font-bold h-14 text-base rounded-none-none mt-2 transition-all duration-300 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
             onClick={() => setStep(1)}
+            disabled={!termsAccepted}
           >
             Iniciar Configuración
           </Button>
@@ -492,7 +575,7 @@ function SetupStepperContent() {
 
   return (
     <>
-    <div className="min-h-screen bg-[#070913] text-white flex flex-col items-center justify-start px-3 py-6 sm:px-4 sm:py-10 transition-all duration-500 ease-in-out relative overflow-hidden">
+    <div className="min-h-screen bg-[#070913] text-white flex flex-col items-center justify-start px-3 py-6 sm:px-4 sm:py-10 transition-all duration-500 ease-in-out relative overflow-clip">
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 40v-5h5v-5h5v-5h5v-5h5V0H0v20h5v5h5v5h5v5h5v5z' fill='none' stroke='%23818cf8' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")` }}></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c14] via-transparent to-[#0a0c14] pointer-events-none"></div>
       
@@ -527,15 +610,20 @@ function SetupStepperContent() {
       {/* Outer Layout container with lateral Back button */}
       <div className="w-full max-w-7xl flex gap-6 items-start relative z-10">
         {/* Lateral Floating Back Button */}
-        {step > 0 && (
-          <button
-            onClick={goBack}
-            className="hidden md:flex p-4 rounded-none-full border border-zinc-800 bg-[#121626]/80 hover:bg-[#181d33] hover:border-[#6366f1]/55 text-zinc-450 hover:text-white transition-all shadow-lg shrink-0 mt-0"
-            title="Atrás"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-        )}
+        <div className="hidden md:flex w-16 shrink-0 pt-2">
+          {step > 0 && (
+            <button
+              onClick={goBack}
+              className="w-12 h-12 rounded-full border border-[#1e2640] bg-[#121626]/80 hover:bg-[#6366f1]/20 hover:border-[#6366f1]/50 text-zinc-400 hover:text-[#818cf8] transition-all flex items-center justify-center shadow-lg group relative"
+              title="Atrás"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <div className="absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] uppercase font-bold text-[#818cf8] tracking-widest whitespace-nowrap">
+                Regresar
+              </div>
+            </button>
+          )}
+        </div>
 
         <div className="flex-1 w-full">
           <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -558,10 +646,22 @@ function SetupStepperContent() {
                     </Button>
                   ) : (
                     <Button
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all sm:w-auto h-12 px-6 text-base"
-                      onClick={() => setShowWallet(true)}
+                      className="w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold transition-all sm:w-auto h-14 px-10 text-lg shadow-[0_0_20px_rgba(99,102,241,0.25)] relative overflow-hidden group"
+                      onClick={finalizeVault}
+                      disabled={isGenerating}
                     >
-                      Ver Bóveda <ArrowRight className="w-4.5 h-4.5 ml-2" />
+                      {isGenerating ? (
+                        <span className="flex items-center gap-3">
+                          <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                          <span className="animate-pulse">Cifrando Bóveda...</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          Finalizar y Ver Bóveda
+                          <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                      )}
+                      {!isGenerating && <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />}
                     </Button>
                   )}
                 </div>
@@ -569,7 +669,7 @@ function SetupStepperContent() {
             </div>
 
         {/* Columna del Mapa de Progreso */}
-        <div className="w-full rounded-none-none glass-card p-6 flex flex-col space-y-5 shadow-2xl animate-scaleIn animate-slideUp">
+        <div className="w-full rounded-none-none glass-card p-6 flex flex-col space-y-5 shadow-2xl animate-scaleIn animate-slideUp lg:sticky lg:top-8">
           <div>
             <h3 className="text-sm font-bold tracking-widest text-zinc-350 uppercase font-mono mb-4 flex items-center justify-between">
               <span>Progreso de Bóveda</span>
@@ -585,7 +685,7 @@ function SetupStepperContent() {
                   Nivel de Detalle
                 </span>
                 <span className="text-xs bg-[#6366f1]/20 text-[#a5b4fc] border border-[#6366f1]/30 px-2.5 py-1 rounded-none-none font-bold capitalize">
-                  {experienceLevel === "beginner" ? "Básico" : "Técnico"}
+                  {experienceLevel === "beginner" ? "Principiante" : "Técnico"}
                 </span>
               </div>
 
@@ -607,41 +707,73 @@ function SetupStepperContent() {
                 <span className="text-xs text-zinc-400 uppercase font-mono font-bold block">
                   Dispositivos
                 </span>
-                <div className="space-y-1.5">
-                  {Array.from({ length: config.totalDevices }).map((_, index) => {
-                    const key = config.keys[index];
-                    const isLoaded = !!key && key.isValid;
-                    const deviceType = key?.deviceType || (index === 0 ? "mobile" : "laptop");
+                {config.totalDevices >= 6 ? (
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                    {Array.from({ length: config.totalDevices }).map((_, index) => {
+                      const key = config.keys[index];
+                      const isLoaded = !!key && key.isValid;
+                      const deviceType = key?.deviceType || (index === 0 ? "mobile" : "laptop");
 
-                    return (
-                      <div
-                        key={index}
-                        className={cn(
-                          "flex items-center justify-between p-3 rounded-none-none border text-sm transition-all duration-350",
-                          isLoaded
-                            ? "border-[#1e2640] bg-[#181d33]/30"
-                            : "border-dashed border-zinc-800 bg-transparent opacity-50"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-zinc-400 font-mono text-xs flex items-center gap-1.5">
-                            {deviceType === "mobile" ? <Smartphone className="w-4 h-4" /> : <Laptop className="w-4 h-4" />}
+                      return (
+                        <div
+                          key={index}
+                          title={key?.label || `Dispositivo ${index + 1}`}
+                          className={cn(
+                            "aspect-square flex items-center justify-center rounded-lg border transition-all duration-350 relative group",
+                            isLoaded
+                              ? "border-emerald-800/40 bg-emerald-950/20"
+                              : "border-dashed border-zinc-800 bg-transparent opacity-50"
+                          )}
+                        >
+                          <span className={cn("font-mono", isLoaded ? "text-emerald-400" : "text-zinc-500")}>
+                            {deviceType === "mobile" ? <Smartphone className="w-5 h-5" /> : <Laptop className="w-5 h-5" />}
                           </span>
-                          <span className="text-zinc-200 font-semibold truncate max-w-[130px]">
-                            {key?.label || `Dispositivo ${index + 1}`}
+                          {isLoaded && (
+                            <div className="absolute -top-1.5 -right-1.5 bg-[#070913] rounded-full">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {Array.from({ length: config.totalDevices }).map((_, index) => {
+                      const key = config.keys[index];
+                      const isLoaded = !!key && key.isValid;
+                      const deviceType = key?.deviceType || (index === 0 ? "mobile" : "laptop");
+
+                      return (
+                        <div
+                          key={index}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-none-none border text-sm transition-all duration-350",
+                            isLoaded
+                              ? "border-[#1e2640] bg-[#181d33]/30"
+                              : "border-dashed border-zinc-800 bg-transparent opacity-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-zinc-400 font-mono text-xs flex items-center gap-1.5">
+                              {deviceType === "mobile" ? <Smartphone className="w-4 h-4" /> : <Laptop className="w-4 h-4" />}
+                            </span>
+                            <span className="text-zinc-200 font-semibold truncate max-w-[130px]">
+                              {key?.label || `Dispositivo ${index + 1}`}
+                            </span>
+                          </div>
+                          <span className="text-xs shrink-0">
+                            {isLoaded ? (
+                              <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
+                            ) : (
+                              <Circle className="w-4.5 h-4.5 text-zinc-700" />
+                            )}
                           </span>
                         </div>
-                        <span className="text-xs shrink-0">
-                          {isLoaded ? (
-                            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
-                          ) : (
-                            <Circle className="w-4.5 h-4.5 text-zinc-700" />
-                          )}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Seguro de Recuperación */}
@@ -748,6 +880,85 @@ function SetupStepperContent() {
             </p>
           </div>
         </>
+      )}
+
+      {/* Modal Advertencia Saltar Configuración */}
+      {showSkipWarning && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#070913]/80 backdrop-blur-sm animate-scaleIn">
+          <div className="max-w-md w-full mx-4 rounded-none border border-[#6366f1]/30 bg-[#0a0c14] shadow-[0_0_30px_rgba(99,102,241,0.15)] p-6 space-y-5">
+            <div className="w-12 h-12 rounded-full bg-[#6366f1]/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6 text-[#818cf8]" />
+            </div>
+            <div>
+              <h3 className="text-white font-extrabold text-xl tracking-tight">Seguro Incompleto</h3>
+              <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
+                Activaste el seguro de emergencia pero no terminaste de configurarlo. 
+                Si omites este paso ahora, aplicaremos una configuración de seguridad estándar: 
+                <strong className="text-[#818cf8] font-semibold"> Bloqueo de 6 meses y auto-recuperación con 1 firma.</strong>
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowSkipWarning(false)}
+                className="flex-1 py-3 border border-[#1e2640] bg-[#121626] text-zinc-300 font-bold hover:bg-[#181d33] hover:text-white transition-colors"
+              >
+                Volver a configurar
+              </button>
+              <button
+                onClick={forceSkipAndNext}
+                className="flex-1 py-3 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold transition-colors shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+              >
+                Omitir y Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Resumen Principiante */}
+      {showBeginnerSummary && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#070913]/90 backdrop-blur-md animate-scaleIn">
+          <div className="max-w-lg w-full mx-4 rounded-none border border-[#6366f1]/20 bg-[#0a0c14] shadow-[0_0_50px_rgba(99,102,241,0.1)] p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#6366f1]/10 flex items-center justify-center shrink-0 mb-4">
+                <CheckCircle2 className="w-8 h-8 text-[#818cf8]" />
+              </div>
+              <h2 className="text-2xl font-black text-white">¡Bóveda Lista!</h2>
+              <p className="text-zinc-400 text-sm">Resumen de tu nueva protección criptográfica</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex gap-4 items-start p-4 bg-[#121626]/50 border border-[#1e2640]">
+                <Shield className="w-6 h-6 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-white font-bold">La Puerta Principal</div>
+                  <div className="text-sm text-zinc-400 mt-1">
+                    Tu bóveda consta de {config.totalDevices} llaves. Para mover fondos, siempre necesitarás autorizar con al menos {config.requiredApprovals} de ellas.
+                  </div>
+                </div>
+              </div>
+              
+              {config.timelock.enabled && (
+                <div className="flex gap-4 items-start p-4 bg-[#121626]/50 border border-[#1e2640]">
+                  <HelpCircle className="w-6 h-6 text-[#818cf8] shrink-0" />
+                  <div>
+                    <div className="text-white font-bold">El Seguro de Emergencia</div>
+                    <div className="text-sm text-zinc-400 mt-1">
+                      Si pierdes llaves, tras {blocksToHuman(config.timelock.blocks)} de inactividad, los fondos podrán recuperarse mediante tu ruta secundaria ({config.timelock.recoveryMode === "trusted-person" ? "Persona de confianza" : "Auto-recuperación"}).
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={finalizeVault}
+              className="w-full h-14 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold text-lg flex items-center justify-center shadow-lg transition-all"
+            >
+              Entendido, Entrar a mi Bóveda
+            </button>
+          </div>
+        </div>
       )}
     </div>
     </>

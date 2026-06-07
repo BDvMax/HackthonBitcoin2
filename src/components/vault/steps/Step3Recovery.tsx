@@ -64,15 +64,13 @@ export function Step3Recovery({ config, onChange }: Props) {
   const [customAmount, setCustomAmount] = useState(6);
   const [customUnit, setCustomUnit] = useState<"months" | "years">("months");
 
-  // FIX: inicializar selectedPreset desde el config existente
+  // Sin preselección inicial a menos que ya exista un modo de recuperación seleccionado
   const [selectedPreset, setSelectedPreset] = useState<number | null>(
-    PERIOD_PRESETS.find((p) => p.blocks === timelock.blocks)?.blocks ?? null
+    timelock.recoveryMode ? (PERIOD_PRESETS.find((p) => p.blocks === timelock.blocks)?.blocks ?? null) : null
   );
 
-  // Para Multi Sig: flujo por pasos
   const [maxVisibleStep, setMaxVisibleStep] = useState<number>(
-    // Si ya hay recoveryMode configurado, mostrar todos los pasos
-    timelock.recoveryMode ? 3 : selectedPreset !== null ? 2 : 1
+    timelock.recoveryMode ? 3 : 1
   );
 
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
@@ -91,16 +89,36 @@ export function Step3Recovery({ config, onChange }: Props) {
   const handleActivate = () => {
     playSuccess();
     if (isSingleSig) {
-      // Single Sig: forzar trusted-person inmediatamente
-      update({
-        enabled: true,
-        recoveryMode: "trusted-person",
-        trustedKey: timelock.trustedKey ?? EMPTY_TRUSTED_KEY(),
+      // Single Sig: forzar trusted-person inmediatamente pero borrar el resto
+      onChange({
+        timelock: {
+          enabled: true,
+          type: "relative",
+          blocks: 0, // Se usará para forzar que el usuario elija
+          recoveryMode: "trusted-person",
+          trustedKey: null,
+          recoveryApprovals: 1
+        }
       });
+      setSelectedPreset(null);
+      setCustomPeriod(false);
+      setMaxVisibleStep(1);
     } else {
-      update({ enabled: true });
+      // Multisig: borrar todo para que no haya preselección
+      onChange({
+        timelock: {
+          enabled: true,
+          type: "relative",
+          blocks: 0, // Sin preselección real de bloques
+          // @ts-ignore - Forzamos undefined/null para que no haya nada preseleccionado
+          recoveryMode: null,
+          trustedKey: null,
+          recoveryApprovals: Math.max(1, requiredApprovals - 1)
+        }
+      });
       setMaxVisibleStep(1);
       setSelectedPreset(null);
+      setCustomPeriod(false);
     }
   };
 
@@ -158,6 +176,7 @@ export function Step3Recovery({ config, onChange }: Props) {
               update({ blocks: p.blocks });
               setCustomPeriod(false);
               setSelectedPreset(p.blocks);
+              onConfirm();
             }}
             className={cn(
               "px-5 py-2.5 rounded-none border text-sm transition-all duration-300 font-semibold",
@@ -251,12 +270,12 @@ export function Step3Recovery({ config, onChange }: Props) {
         Equivale a <span className="font-mono text-zinc-300 font-bold">{timelock.blocks.toLocaleString()}</span> bloques ({blocksToHuman(timelock.blocks)}).
       </p>
 
-      {(selectedPreset !== null || customPeriod) && (
+      {customPeriod && (
         <button
           onClick={onConfirm}
-          className="mt-1 px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold rounded-none transition-colors shadow-md"
+          className="mt-4 px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold rounded-none transition-colors shadow-md"
         >
-          Confirmar Período →
+          Confirmar Período personalizado →
         </button>
       )}
     </div>

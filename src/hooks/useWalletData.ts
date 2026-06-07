@@ -352,8 +352,8 @@ export function useWalletData(config: VaultConfig) {
         .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath, fingerprint: k.fingerprint }));
 
         // CORRECCIÓN AQUÍ 
-        const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0, descriptor);
-        const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1, descriptor);
+        const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0);
+        const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1);
         const derived = [...receiveAddresses, ...changeAddresses];
 
         setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
