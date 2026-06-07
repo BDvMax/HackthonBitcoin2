@@ -7,6 +7,9 @@ const DEFAULT_CONFIG: VaultConfig = {
   totalDevices: 1,
   requiredApprovals: 1,
 
+  vaultType: "multi",
+  totalDevices: 3,
+  requiredApprovals: 2,
   keys: [],
 
   timelock: {
