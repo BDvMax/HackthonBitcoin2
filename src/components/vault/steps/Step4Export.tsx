@@ -14,6 +14,50 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCodeGenerator from "qrcode";
 
+
+function getMempoolApi(network: string): string {
+  switch (network) {
+    case "mainnet":
+      return "https://mempool.space/api";
+
+    case "testnet":
+      return "https://mempool.space/testnet/api";
+
+    case "signet":
+      return "https://mempool.space/signet/api";
+
+    case "testnet4":
+      return "https://mempool.space/testnet4/api";
+
+    default:
+      return "https://mempool.space/api";
+  }
+}
+
+function getMempoolExplorer(network: string): string {
+  switch (network) {
+    case "mainnet":
+      return "https://mempool.space";
+
+    case "testnet":
+      return "https://mempool.space/testnet";
+
+    case "signet":
+      return "https://mempool.space/signet";
+
+    case "testnet4":
+      return "https://mempool.space/testnet4";
+
+    default:
+      return "https://mempool.space";
+  }
+}
+
+interface Props {
+  config: VaultConfig;
+}
+
+
 interface Props { config: VaultConfig; }
 
 export function Step4Export({ config }: Props) {
@@ -48,7 +92,7 @@ export function Step4Export({ config }: Props) {
         config.network,
         5,
         0,
-        raw
+      
       );
       return { descriptor: withChecksum, addresses: addrs, error: "" };
     } catch (error: unknown) {
@@ -67,8 +111,7 @@ export function Step4Export({ config }: Props) {
     setAddressInfoError(null);
     setSelectedExplorerAddr(addr);
     try {
-      const isTestnet = config.network === "testnet";
-      const baseUrl = isTestnet ? "https://mempool.space/testnet/api" : "https://mempool.space/api";
+      const baseUrl = getMempoolApi(config.network);
       const res = await fetch(`${baseUrl}/address/${addr}`);
       if (!res.ok) throw new Error("Error al consultar el explorador público.");
       const data = await res.json();
@@ -457,7 +500,7 @@ export function Step4Export({ config }: Props) {
                 </span>
                 <div className="flex items-center gap-4">
                   <a 
-                    href={`https://mempool.space/${config.network === "testnet" ? "testnet/" : ""}address/${selectedExplorerAddr}`} 
+                    href={`${getMempoolExplorer(config.network)}/address/${selectedExplorerAddr}`}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-[#818cf8] hover:text-white text-xs font-semibold underline underline-offset-2 flex items-center gap-1"

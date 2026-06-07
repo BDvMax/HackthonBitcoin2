@@ -2,17 +2,22 @@ import { useState } from "react";
 import type { VaultConfig, SetupStep } from "@/lib/types/vault";
 
 const DEFAULT_CONFIG: VaultConfig = {
-  totalDevices: 3,
-  requiredApprovals: 2,
+  vaultType: "single",
+
+  totalDevices: 1,
+  requiredApprovals: 1,
+
   keys: [],
+
   timelock: {
-    enabled: false,
+    enabled: true,
     type: "relative",
     blocks: 25920,
     recoveryMode: "current-keys",
     recoveryApprovals: 1,
     trustedKey: null,
   },
+
   network: "testnet",
 };
 
