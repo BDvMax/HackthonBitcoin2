@@ -14,6 +14,50 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCodeGenerator from "qrcode";
 
+
+function getMempoolApi(network: string): string {
+  switch (network) {
+    case "mainnet":
+      return "https://mempool.space/api";
+
+    case "testnet":
+      return "https://mempool.space/testnet/api";
+
+    case "signet":
+      return "https://mempool.space/signet/api";
+
+    case "testnet4":
+      return "https://mempool.space/testnet4/api";
+
+    default:
+      return "https://mempool.space/api";
+  }
+}
+
+function getMempoolExplorer(network: string): string {
+  switch (network) {
+    case "mainnet":
+      return "https://mempool.space";
+
+    case "testnet":
+      return "https://mempool.space/testnet";
+
+    case "signet":
+      return "https://mempool.space/signet";
+
+    case "testnet4":
+      return "https://mempool.space/testnet4";
+
+    default:
+      return "https://mempool.space";
+  }
+}
+
+interface Props {
+  config: VaultConfig;
+}
+
+
 interface Props { config: VaultConfig; }
 
 export function Step4Export({ config }: Props) {
@@ -67,8 +111,7 @@ export function Step4Export({ config }: Props) {
     setAddressInfoError(null);
     setSelectedExplorerAddr(addr);
     try {
-      const isTestnet = config.network === "testnet";
-      const baseUrl = isTestnet ? "https://mempool.space/testnet/api" : "https://mempool.space/api";
+      const baseUrl = getMempoolApi(config.network);
       const res = await fetch(`${baseUrl}/address/${addr}`);
       if (!res.ok) throw new Error("Error al consultar el explorador público.");
       const data = await res.json();
@@ -148,7 +191,7 @@ export function Step4Export({ config }: Props) {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
     doc.text("KUKUL VAULT", 14, 20);
-    
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
@@ -173,10 +216,10 @@ export function Step4Export({ config }: Props) {
 
     // 3. QR Code
     try {
-      const qrDataUrl = await QRCodeGenerator.toDataURL(descriptor, { 
-        width: 150, 
-        margin: 1, 
-        color: { dark: '#000000FF', light: '#FFFFFFFF' } 
+      const qrDataUrl = await QRCodeGenerator.toDataURL(descriptor, {
+        width: 150,
+        margin: 1,
+        color: { dark: '#000000FF', light: '#FFFFFFFF' }
       });
       doc.addImage(qrDataUrl, "PNG", pageWidth - 65, 45, 50, 50);
       doc.setFontSize(9);
@@ -226,7 +269,7 @@ export function Step4Export({ config }: Props) {
     // 6. Footer
     doc.setDrawColor(200, 200, 200);
     doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(150, 150, 150);
@@ -242,7 +285,7 @@ export function Step4Export({ config }: Props) {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
     doc.text("KUKUL VAULT", 14, 20);
-    
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(lightText[0], lightText[1], lightText[2]);
@@ -260,14 +303,14 @@ export function Step4Export({ config }: Props) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50, 50, 50);
-    
+
     const instructions = [
       "1. Mantenga este documento en un lugar seguro. El 'Descriptor BIP380' (en la página 1) es todo lo que necesita para restaurar su bóveda en cualquier software compatible con Bitcoin.",
       "2. Necesitará usar sus dispositivos de hardware para firmar y autorizar cualquier retiro.",
       "3. Si activó el Seguro de Emergencia (Timelock), en caso de pérdida, debe esperar el tiempo de bloqueo definido para recuperar los fondos con menos firmas.",
       "4. Puede depositar fondos en cualquiera de las direcciones mostradas a continuación. Son direcciones de contrato exclusivas de su bóveda."
     ];
-    
+
     let currentY = 68;
     instructions.forEach((text) => {
       const lines = doc.splitTextToSize(text, pageWidth - 28);
@@ -276,19 +319,19 @@ export function Step4Export({ config }: Props) {
     });
 
     currentY += 5;
-    
+
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
     doc.text("Direcciones de Depósito", 14, currentY);
-    
+
     currentY += 5;
     doc.setDrawColor(200, 200, 200);
     doc.line(14, currentY, pageWidth - 14, currentY);
     currentY += 8;
 
     const addressesData = addresses.map((a) => [a.path, a.address]);
-    
+
     autoTable(doc, {
       startY: currentY,
       head: [["Derivación", "Dirección"]],
@@ -300,7 +343,7 @@ export function Step4Export({ config }: Props) {
 
     doc.setDrawColor(200, 200, 200);
     doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(150, 150, 150);
@@ -332,12 +375,12 @@ export function Step4Export({ config }: Props) {
         <>
           {/* Descriptor box */}
           <div className="rounded-none-none border border-[#1e2640] bg-[#121626]/40 p-6 flex flex-col items-center space-y-6 relative">
-            <div 
+            <div
               className="bg-white p-6 rounded-none w-full shadow-sm relative flex justify-center items-center"
             >
               <QRCode value={descriptor} className="w-full max-w-[400px] h-auto" />
             </div>
-            
+
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-widest text-zinc-400 font-mono font-bold">
@@ -470,9 +513,9 @@ export function Step4Export({ config }: Props) {
                   Estado en Blockchain (Mempool.space)
                 </span>
                 <div className="flex items-center gap-4">
-                  <a 
-                    href={`https://mempool.space/${config.network === "testnet" ? "testnet/" : ""}address/${selectedExplorerAddr}`} 
-                    target="_blank" 
+                  <a
+                    href={`${getMempoolExplorer(config.network)}/address/${selectedExplorerAddr}`}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#818cf8] hover:text-white text-xs font-semibold underline underline-offset-2 flex items-center gap-1"
                   >
@@ -536,7 +579,7 @@ export function Step4Export({ config }: Props) {
           <div className="mt-8 border-t border-zinc-800/80 pt-6">
             <h3 className="text-xl font-bold text-white mb-2 font-mono text-center">Descargas</h3>
             <div className="w-full border-t-2 border-dashed border-zinc-700 mb-6 mt-4"></div>
-            
+
             <div className="flex gap-3 flex-col sm:flex-row flex-wrap">
               <Button
                 onClick={download}
@@ -565,18 +608,18 @@ export function Step4Export({ config }: Props) {
       )}
       {/* Fullscreen QR Modal */}
       {showFullscreenQR && (
-        <div 
+        <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#070913] animate-scaleIn"
           onClick={() => setShowFullscreenQR(false)}
         >
-          <button 
+          <button
             className="absolute top-6 right-6 text-zinc-400 hover:text-white transition-colors bg-zinc-900/50 p-3 rounded-none hover:bg-zinc-800"
             onClick={() => setShowFullscreenQR(false)}
           >
             <X className="w-8 h-8" />
           </button>
-          
-          <div 
+
+          <div
             className="w-full h-full flex items-center justify-center p-8 sm:p-12 md:p-24"
             onClick={e => e.stopPropagation()}
           >

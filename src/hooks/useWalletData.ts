@@ -120,8 +120,8 @@ function esploraBase(network: string): string {
     case "signet":
       // Opción B — Signet oficial (mempool.space)
       return "https://mempool.space/signet/api";
-      // Opción A — Mutinynet (red signet personalizada de Mutiny)
-      // return "https://mutinynet.com/api";
+    // Opción A — Mutinynet (red signet personalizada de Mutiny)
+    // return "https://mutinynet.com/api";
 
     case "testnet4":
       return "https://mempool.space/testnet4/api";
@@ -341,22 +341,22 @@ export function useWalletData(config: VaultConfig) {
     const base = esploraBase(config.network);
 
     try {
-        const raw = generateDescriptor(config);
-        const descriptor = descriptorWithChecksum(raw);
+      const raw = generateDescriptor(config);
+      const descriptor = descriptorWithChecksum(raw);
 
-        setState(s => ({ ...s, progress: 10, progressLabel: "Derivando direcciones..." }));
+      setState(s => ({ ...s, progress: 10, progressLabel: "Derivando direcciones..." }));
 
-        // 2. Derivar direcciones (RECIBO + CAMBIO)
-        const validKeys = config.keys
+      // 2. Derivar direcciones (RECIBO + CAMBIO)
+      const validKeys = config.keys
         .filter(k => k.isValid)
         .map(k => ({ xpub: k.xpub, derivationPath: k.derivationPath, fingerprint: k.fingerprint }));
 
-        // CORRECCIÓN AQUÍ 
-        const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0);
-        const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1);
-        const derived = [...receiveAddresses, ...changeAddresses];
+      // CORRECCIÓN AQUÍ 
+      const receiveAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 0);
+      const changeAddresses = deriveWshAddresses(validKeys, config.requiredApprovals, config.network, 20, 1);
+      const derived = [...receiveAddresses, ...changeAddresses];
 
-        setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
+      setState(s => ({ ...s, stage: "scanning", progress: 20, progressLabel: "Consultando red..." }));
 
       // 3. Obtener tip height
       let tipHeight = 0;

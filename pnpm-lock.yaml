@@ -23,6 +23,9 @@ importers:
       bip32:
         specifier: ^5.0.1
         version: 5.0.1(typescript@5.9.3)
+      bip39:
+        specifier: ^3.1.0
+        version: 3.1.0
       bitcoinjs-lib:
         specifier: ^7.0.1
         version: 7.0.1(typescript@5.9.3)
@@ -1856,6 +1859,9 @@ packages:
   bip32@5.0.1:
     resolution: {integrity: sha512-PWlHIAgYCfVhwqNpZyeakHXuLAGyN6rEQZnhxHxKI3BoFJRVWLl26455fhRlHsmbYcV986HqtPnt33Edu5sTCw==}
     engines: {node: '>=18.0.0'}
+
+  bip39@3.1.0:
+    resolution: {integrity: sha512-c9kiwdk45Do5GL0vJMe7tS95VjCii65mYAH7DfWl3uW8AVzXKQVUm64i3hzVybBDMp9r7j9iNxR85+ul8MdN/A==}
 
   bip68@1.0.4:
     resolution: {integrity: sha512-O1htyufFTYy3EO0JkHg2CLykdXEtV2ssqw47Gq9A0WByp662xpJnMEB9m43LZjsSDjIAOozWRExlFQk2hlV1XQ==}
@@ -5888,6 +5894,10 @@ snapshots:
       wif: 5.0.0
     transitivePeerDependencies:
       - typescript
+
+  bip39@3.1.0:
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   bip68@1.0.4: {}
 

@@ -6,14 +6,16 @@ const DEFAULT_CONFIG: VaultConfig = {
   totalDevices: 3,
   requiredApprovals: 2,
   keys: [],
+
   timelock: {
-    enabled: false,
+    enabled: true,
     type: "relative",
     blocks: 25920,
     recoveryMode: "current-keys",
     recoveryApprovals: 1,
     trustedKey: null,
   },
+
   network: "testnet",
 };
 
