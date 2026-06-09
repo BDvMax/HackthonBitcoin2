@@ -6,6 +6,15 @@ Este proyecto combina la potencia técnica del lenguaje descriptor de Bitcoin (B
 
 ---
 
+## Video Demostrativo
+
+[![Ver demostración de Kukul Vault](https://img.shields.io/badge/Ver-Demostración-red?style=for-the-badge&logo=youtube)](https://youtube.com/watch?v=TU_VIDEO)
+
+**Video explicativo del proyecto:**
+https://youtube.com/watch?v=TU_VIDEO
+
+---
+
 ## Funcionamiento
 
 El asistente interactivo de Kukul Vault te guía paso a paso para conformar tu bóveda:
